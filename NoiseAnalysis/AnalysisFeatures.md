@@ -5,4 +5,4 @@ As you may or may not be aware of there is a 79.5 MHz Noise that frequently inte
     $A*sin(\omega\tau +\phi)$
 
 ## Geometric Noise Analysis 
-    Using the Phase Parameter we can extract important information about the location of our potential beacon.  
+Using the Phase Parameter we can extract important information about the location of our potential beacon. GeometericNoiseAnalysis.C contains callibation data of incramenetenting the telescopes at fitting with a point source noise model to find the location of the noise beacon.  
