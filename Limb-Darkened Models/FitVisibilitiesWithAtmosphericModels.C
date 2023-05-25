@@ -1,0 +1,444 @@
+double JasonGrid[numFiles][numVis];
+double BaselineRecorded[numVis], BaseError[numVis], VisibilityRecorded[numVis], ErrorRecorded[numVis];
+double milliarcValues[numFiles];
+double LowestAllowed_Global;
+    
+// Use awk/grep to get Model paths and populate Dir[numFiles]
+const int numFiles = 122;
+const int numVis = 22; 
+TString Dir[numFiles] = {
+};
+
+
+// Jason gave us a grid of values.  This just interpolates linearly between them and calculated chi2.  It is NOT clever
+void InterpolateJason(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag){
+  double diameter = par[0];
+  double ScalingConstant = par[1];
+
+  if (diameter<=milliarcValues[0]) return 999;              // went off the low edge! (yes, I want the "<=" instead of "<".  It's just easier
+  if (diameter>milliarcValues[numFiles-1]) return 999;      // went off the high edge!
+  // now find which points are on the left and right of the requested diameter
+  int iupper;
+  for (iupper=0; iupper<numFiles; iupper++){if (diameter<milliarcValues[iupper]) break;}
+
+  if (iupper==0){ cout << "Error!  Asked to interpolate off of the low edge! " << diameter << "\n\n"; f=9999; return;}
+  if (iupper==numFiles) { cout << "Error!  Asked to interpolate off of the high edge! " << diameter << "\n\n"; f=9999; return;}
+  
+  int ilower = iupper-1;  // obviously
+  double DeltaDiameter = milliarcValues[iupper] - milliarcValues[ilower];
+  double chi2value(0.0);
+  for (int jjj=0; jjj<numVis; jjj++){
+    if (VisibilityRecorded[jjj]<LowestAllowed_Global) continue;  // dropping data!
+    double InterpolatedJason = ((diameter-milliarcValues[ilower])*JasonGrid[iupper][jjj] + (milliarcValues[iupper]-diameter)*JasonGrid[ilower][jjj])
+      / DeltaDiameter;
+    chi2value += pow((InterpolatedJason*ScalingConstant-VisibilityRecorded[jjj])/ErrorRecorded[jjj],2);
+  }
+  f = chi2value;
+}
+
+// to make the error contours in C and diameter, as Jason requested, look at this example
+// of how to write your own chi2 function.  Note that we will need to interpolate Jason's
+// predictions, for when Minuit asks for chi2 for a diameter value not exactly equal to
+// one that Jason sent.
+
+
+void ComparisonMacro2(double LowestAllowedValue=-999999){
+    
+    //gStyle->SetOptFit(1);           
+    //gStyle->SetOptStat(0);
+    gStyle->SetStatX(0.9);          gStyle->SetStatY(0.9);
+    gStyle->SetLabelFont(42,"X");   gStyle->SetLabelSize(0.04, "X");
+    gStyle->SetLabelFont(42,"Y");   gStyle->SetLabelSize(0.04, "Y");
+    gStyle->SetLegendFont(42);      gStyle->SetLegendTextSize(0.04);
+    gStyle->SetStatFont(42);        gStyle->SetStatFontSize(0.04);
+    gStyle->SetTitleFont(42,"X");   gStyle->SetTitleSize(0.04, "X");
+    gStyle->SetTitleFont(42,"Y");   gStyle->SetTitleSize(0.04, "Y");
+    gStyle->SetTitleFont(42,"T");   gStyle->SetTitleSize(0.07, "T");
+    gStyle->SetStatFormat("6.2g");
+
+  LowestAllowed_Global = LowestAllowedValue;  // this is just so I can carry this value in global scope and feed it to the function used by Minuit
+  
+  
+  ///All hisograms are saved in BaselineHistograms[w] in the same order at the baslines that are read in from the PointsInVisibilityCurve.txt
+  //----------------------------------------------------------------------------------------------------
+  string DirLine;
+  std::ifstream Directories;
+  Directories.open("./GoodDirectories.txt",std::ifstream::in);
+  
+  TCanvas * ManyBaselines = new TCanvas("ManyBaselines", "ManyBaselines", 1600, 1200);
+  ManyBaselines->Print("BaselineHistograms.pdf[");
+  TH1D * BaselineHistograms[numVis]; // HERE is WHERE ALL OF THE BASELINE HISTOGRAMS ARE SAVED
+  TString filename(0); 
+  int NumSplits(0), WhichSplit(0);
+  int w(0), version(0);
+  TTree *header;
+  
+  while (getline (Directories,DirLine)){
+      if(w < numVis-1){
+        Directories >> filename >> NumSplits >> WhichSplit;
+        //cout << filename << "   " << NumSplits << "   " << WhichSplit << endl; 
+        TFile * OneDirectory = new TFile(Form("%s/Analysis.root", filename.Data()), "READONLY");
+        OneDirectory->GetObject("Header",header);
+        header->SetBranchAddress("VersionBr",&version);
+        header->GetEntry(0);
+        cout << version << endl;
+        
+        TGraph * BaselineGraph;
+        TH1D *ADC1N, *ADC2N;
+        TH2D *ADC1, *ADC2;
+        OneDirectory->GetObject("BaselineGraph",BaselineGraph);
+        TGraph *BaselineGraphThisSplit = new TGraph();
+        
+        for(int SplitUp = WhichSplit * BaselineGraph->GetN()/NumSplits; SplitUp < WhichSplit* BaselineGraph->GetN()/NumSplits+BaselineGraph->GetN()/NumSplits; ++SplitUp){
+                //cout << ADC1N->GetBinContent(SplitUp) << "   " << ADC2N->GetBinContent(SplitUp) << endl;
+            BaselineGraphThisSplit->AddPoint(SplitUp, BaselineGraph->GetPointY(SplitUp)); //*ADC1N->GetBinContent(SplitUp)*ADC2N->GetBinContent(SplitUp)
+        }
+        TH1D* BaselineHistTemp = new TH1D("TempBaseline", Form("%s",filename.Data()), 50, BaselineGraphThisSplit->GetHistogram()->GetMinimum(), BaselineGraphThisSplit->GetHistogram()->GetMaximum());
+        
+        //Read in ADCs and make sure nothing is empty 
+        if(version > 0){
+            OneDirectory->GetObject("ADC1", ADC1N); 
+            OneDirectory->GetObject("ADC2", ADC2N);
+            if(ADC1N == 0 || ADC2N == 0){cout << "Oh no we have a problem!! " << endl;}
+            cout << " ********" << BaselineGraphThisSplit->GetN() << endl;
+            for(int baselinevalue = 0; baselinevalue < BaselineGraphThisSplit->GetN(); ++baselinevalue){
+                BaselineHistTemp->Fill(BaselineGraphThisSplit->GetPointY(baselinevalue), ADC1N->GetBinContent(baselinevalue+ WhichSplit * BaselineGraph->GetN()/NumSplits)*ADC2N->GetBinContent(baselinevalue+ WhichSplit * BaselineGraph->GetN()/NumSplits));
+            }
+            BaselineHistograms[w] = BaselineHistTemp;
+        }
+        
+        if(version < 0){
+            OneDirectory->GetObject("ADC1", ADC1);
+            OneDirectory->GetObject("ADC2", ADC2);
+            if(ADC1 == 0 || ADC2 == 0){cout << "Oh no we have a problem!! " << endl;};
+            for(int baselinevalue = 0; baselinevalue < BaselineGraphThisSplit->GetN(); ++baselinevalue){
+                TH1D* ADC1y = ADC1->ProjectionX("temp1",baselinevalue + WhichSplit * BaselineGraph->GetN()/NumSplits ,baselinevalue + WhichSplit * BaselineGraph->GetN()/NumSplits);
+                TH1D* ADC2y = ADC2->ProjectionX("temp2",baselinevalue + WhichSplit * BaselineGraph->GetN()/NumSplits ,baselinevalue + WhichSplit * BaselineGraph->GetN()/NumSplits);
+                BaselineHistTemp->Fill(BaselineGraphThisSplit->GetPointY(baselinevalue), ADC1y->GetMean()*ADC2y->GetMean());
+            }
+        }
+        
+        BaselineHistograms[w] = BaselineHistTemp;
+
+        //cout << BaselineGraph->GetHistogram()->GetMinimum() << "   "  << BaselineGraph->GetHistogram()->GetMaximum() << endl;
+        //cout <<"***" <<  BaselineGraph->GetN() << "   " << BaselineGraph->GetN()/NumSplits << "  Start:   " << WhichSplit* BaselineGraph->GetN()/NumSplits << "end:    " << WhichSplit* BaselineGraph->GetN()/NumSplits+BaselineGraph->GetN()/NumSplits  << endl;
+
+      BaselineHistograms[w]->Draw();
+      ManyBaselines->Print("BaselineHistograms.pdf");
+      
+      ++w;
+      }    
+  }
+  
+  string ZeroLine;
+  std::ifstream ZeroDirectories;
+  ZeroDirectories.open("./ZeroDirectories.txt",std::ifstream::in);
+  
+  TH1D* BaselineHistTempZero = new TH1D("TempBaseline", Form("%s",filename.Data()), 150, 80, 100);
+  
+  int row(0);
+  while (getline (ZeroDirectories,ZeroLine)){
+      while(row<20){
+        ZeroDirectories >> filename;
+        //cout << filename << endl; 
+        TFile * ZeroDirectories = new TFile(Form("%s/Analysis.root", filename.Data()), "READONLY");
+        ZeroDirectories->GetObject("Header",header);
+        header->SetBranchAddress("VersionBr",&version);
+        header->GetEntry(0);
+        
+        TGraph * BaselineGraph;
+        TH1D *ADC1N, *ADC2N;
+        TH2D *ADC1, *ADC2;
+        ZeroDirectories->GetObject("BaselineGraph",BaselineGraph);
+        
+        if(version > 0){
+            ZeroDirectories->GetObject("ADC1", ADC1N); 
+            ZeroDirectories->GetObject("ADC2", ADC2N);
+            if(ADC1N == 0 || ADC2N == 0){cout << "Oh no we have a problem!! " << endl;}
+            for(int baselinevalue = 0; baselinevalue < BaselineGraph->GetN(); ++baselinevalue){
+               cout <<  ADC1N->GetBinContent(baselinevalue) << "   " << ADC2N->GetBinContent(baselinevalue) << endl;
+               BaselineHistTempZero->Fill(BaselineGraph->GetPointY(baselinevalue), ADC1N->GetBinContent(baselinevalue)*ADC2N->GetBinContent(baselinevalue) ); //, ADC1N->GetBinContent(baselinevalue)*ADC2N->GetBinContent(baselinevalue)
+            }
+        }
+        
+        if(version < 0){
+            ZeroDirectories->GetObject("ADC1", ADC1);
+            ZeroDirectories->GetObject("ADC2", ADC2);
+            if(ADC1 == 0 || ADC2 == 0){cout << "Oh no we have a problem!! " << endl;};
+            for(int baselinevalue = 0; baselinevalue < BaselineGraph->GetN(); ++baselinevalue){
+                TH1D* ADC1y = ADC1->ProjectionX("temp1",baselinevalue,baselinevalue);
+                TH1D* ADC2y = ADC2->ProjectionX("temp2",baselinevalue,baselinevalue);
+                
+                cout << BaselineGraph->GetPointY(baselinevalue) << "****" << endl;
+                
+                BaselineHistTempZero->Fill(BaselineGraph->GetPointY(baselinevalue), ADC1y->GetMean()*ADC2y->GetMean() ); //, ADC1y->GetMean()*ADC2y->GetMean()
+            }
+        }
+        
+        
+/*        for(int baselinevalue = 0; baselinevalue < BaselineGraph->GetN(); ++baselinevalue){
+            BaselineHistTempZero->Fill(BaselineGraph->GetPointY(baselinevalue));
+        }*/
+        ++row;
+      }
+  }
+    BaselineHistograms[w] = BaselineHistTempZero;
+    BaselineHistograms[w]->Draw();
+    ManyBaselines->Print("BaselineHistograms.pdf)");  
+//-----------------------------------------------------------------------
+
+
+
+
+
+  
+  string line;
+
+  std::ifstream DataFile;
+  DataFile.open("./PointsInVisibityCurve.txt",std::ifstream::in);
+    
+  int i(0), lowestDir(0), nOnCan(0), nx(3), ny(2);                   //  <----- Mackenzie, I strongly advise not to declare such a generic counting variable in broad scope!
+    double Baseline(0), Visibility(0), Error(0), LowestChiSquare(1000);
+    // I am now defining BaselineRecorded, BaseError, VisibilityRecorded, ErrorRecorded, and milliarcValues in global scope, at top.
+    //  this is so that the minuit function can access them.
+    //    double BaselineRecorded[numVis], BaseError[numVis], VisibilityRecorded[numVis], ErrorRecorded[numVis];
+    //    double milliarcValues[numFiles];
+    double ConstantFactors[numFiles], ChiSquares[numFiles];
+    TGraphErrors * MeasureGraph = new TGraphErrors();
+    
+    while (getline (DataFile,line)){
+        if(i < numVis){
+        DataFile >> Baseline >> Visibility >> Error; 
+        BaselineRecorded[i] = Baseline; VisibilityRecorded[i] = Visibility; ErrorRecorded[i] = Error; BaseError[i] = 0;
+        MeasureGraph->AddPoint(Baseline, Visibility); MeasureGraph->SetPointError(i, 0, Error);
+        ++i;
+        }
+    }
+
+    MeasureGraph->SetMarkerColor(1);
+    MeasureGraph->Draw("A*");
+
+
+    TCanvas * ManyOverlay = new TCanvas("ManyOverlay", "ManyOverlay", 1600, 1200);
+    ManyOverlay->Divide(nx,ny);
+    ManyOverlay->Print("Overlay.pdf[");
+
+    //    double LowestAllowedValue = -99999;   // now we set it as an argument to the macro
+    //LowestAllowedValue = 1.0e-6;
+    int numberOfPointsDiscarded(0);
+    if (LowestAllowedValue>-100){
+      cout << "**********************************\n\n Warning!  I am excluding all VERITAS visibilities below " << LowestAllowedValue << " !! \n\n *************************\n";
+      for (int jjj=0; jjj<numVis; jjj++){if (VisibilityRecorded[jjj]<LowestAllowedValue) numberOfPointsDiscarded++;}
+      cout << "This will result in " << numberOfPointsDiscarded << " of your total of " << numVis << " data points being discarded\n";
+      int trash;
+      cout << "Enter any integer to acknowledge that you see this: ";
+      cin >> trash;
+    }
+    else cout << "We are using all VERITAS visibilities\n";
+    
+    for(int file=0; file < numFiles; ++file){
+        std::ifstream ComparisonFile;
+        ComparisonFile.open(Dir[file],std::ifstream::in);
+        double BaselineCompare[numVis+1], VisibilityCompare[numVis+1];
+        double ConstantNum(0), ConstantDen(0), ChiSquare(0);
+        int inc(0);
+        nOnCan++; 
+        ManyOverlay->cd(nOnCan); 
+        
+        char thenum[5];
+        for (int jj=0; jj<5; jj++){thenum[jj] = Dir[file](23,5).Data()[jj];}
+        
+        //cout << thenum[0] << thenum[1] << thenum[2] << thenum[3] << thenum[4] << endl;
+        
+        double milliarc = (double)atof(thenum); 
+        milliarcValues[file] = milliarc;
+        
+        while (getline (ComparisonFile ,line)){
+            if(inc < numVis){
+            ComparisonFile >> Baseline >> Visibility; 
+            //cout << Baseline << " && " << Visibility << endl;
+            BaselineCompare[inc] = Baseline; VisibilityCompare[inc] = Visibility;
+            JasonGrid[file][inc] = VisibilityCompare[inc];   // for interpolation in the function used by Minuit for the error contours
+            ++inc;
+            }
+        }
+
+	for(int j = 0; j < numVis; ++ j){
+	  //            ConstantNum += (VisibilityRecorded[j]*VisibilityCompare[j])/pow(ErrorRecorded[i],2);   <------------ Mackenzie!!  Here is the mistake!!
+	  if (VisibilityRecorded[j]<LowestAllowedValue)	    continue;   // NOTE!  Excluding datapoints !!
+	  ConstantNum += (VisibilityRecorded[j]*VisibilityCompare[j])/pow(ErrorRecorded[j],2);
+	  ConstantDen += pow(VisibilityCompare[j],2)/pow(ErrorRecorded[j],2);
+          
+        }
+        
+        double ConstantFactor = (ConstantNum/ConstantDen); 
+        ConstantFactors[file] = ConstantFactor;
+        TGraph * JasonGraph = new TGraph();
+
+        for(int j = 0; j < numVis; ++ j){
+	  JasonGraph->AddPoint(BaselineCompare[j], VisibilityCompare[j]*ConstantFactor);
+	  if (VisibilityRecorded[j]<LowestAllowedValue) continue;   // NOTE!  Excluding datapoints !!
+            ChiSquare += pow(VisibilityCompare[j]*ConstantFactor-VisibilityRecorded[j],2)/pow(ErrorRecorded[j],2);
+        }
+        
+	//        ChiSquare /= numVis;      <------------------------------------------ If we name the variable ChiSquare and put that on the axis, let's make it really chi-square
+        ChiSquares[file] = ChiSquare;
+        if(ChiSquare < LowestChiSquare){LowestChiSquare = ChiSquare; lowestDir = file;}
+        
+	cout << "For Jason's radius " << thenum << " chi2 is " << ChiSquare << endl;
+        //MeasureGraph->SetTitle(Form("%lf", milliarc));
+        MeasureGraph->Draw("A*");
+        JasonGraph->SetMarkerColor(2); 
+        JasonGraph->Draw("*, SAME");
+	TLatex * tex = new TLatex(0.05,0.95,Dir[file]); tex->SetNDC(); tex->SetTextSize(0.03); tex->Draw();
+        
+        if (nOnCan==nx*ny){
+            ManyOverlay->Print("Overlay.pdf");
+            nOnCan=0;
+            ManyOverlay->Clear();    ManyOverlay->Divide(nx,ny);
+        }
+    }
+   ManyOverlay->Print("Overlay.pdf");
+    
+    TGraph * ChiSquareGraph = new TGraph(numFiles, milliarcValues, ChiSquares);     ChiSquareGraph->SetTitle("Chi-square By Limb-Darkened Angular Diameter; Angular Diameter (mas); Chi-square");   ChiSquareGraph->SetLineWidth(4);
+    TGraph * ConstantGraph = new TGraph(numFiles, milliarcValues, ConstantFactors); ConstantGraph->SetTitle("Constant Factor By Angular Diameter; Angular Diameter (mas); Constant"); ConstantGraph->SetLineWidth(4);
+    
+    TCanvas * ChiAndConstant = new TCanvas("ChiAndConstant", "ChiAndConstant", 1000, 1000);
+    //ChiAndConstant->Divide(1,2);
+    
+    TPaveText * box =new TPaveText(0.15,0.7,0.55,0.9,"brNDC");
+    box->SetBorderSize(1);
+    
+
+    box->SetBorderSize(1);
+    box->SetTextFont(42); box->SetTextSize(0.035);
+    box->AddText(Form("#chi^{2}/ndf     %3.1lf / %d",LowestChiSquare, numVis -2 - numberOfPointsDiscarded));
+    box->AddText(Form("#theta_{LD} minimized %3.2lf mas", milliarcValues[lowestDir]));
+    box->SetFillColor(kWhite);
+    
+    ChiSquareGraph->Draw("A*");
+    box->Draw();
+    ChiAndConstant->Print("Overlay.pdf");
+    
+    //ChiAndConstant->cd(1); ChiSquareGraph->Draw("A*");
+    //ChiAndConstant->cd(2); 
+    ConstantGraph->Draw("A*");
+    
+    ChiAndConstant->Print("Overlay.pdf");
+
+
+
+    cout << "\n\n\n-------------------------------------------------------------------------------------------\n\n";
+    cout << "Lowest chi2 was " << LowestChiSquare << ", achieved for " << Dir[lowestDir] << endl;
+    int ndf = numVis -2 - numberOfPointsDiscarded;  // I subtract 2, because we are allowing the normalization to vary, too
+    cout << "Chi2/ndf = " << LowestChiSquare << " / " << ndf << " = " << LowestChiSquare/(double)ndf << endl;
+    cout << "Your minimum visibility cut resulted in " << numberOfPointsDiscarded << " data points being discarded\n";
+    cout << "\n\n\n-------------------------------------------------------------------------------------------\n\n";
+    
+    
+        
+   
+    // okay, now that we have found the best fit, let us make a distribution of the normalized residuals.
+
+
+    std::ifstream ComparisonFile;
+    ComparisonFile.open(Dir[lowestDir],std::ifstream::in);
+    double BaselineCompare[numVis], VisibilityCompare[numVis];
+    int inc(0);    
+    while (getline (ComparisonFile ,line)){
+      if(inc < numVis){
+      ComparisonFile >> Baseline >> Visibility; 
+      BaselineCompare[inc] = Baseline; VisibilityCompare[inc] = Visibility;
+      ++inc;
+      }
+    }
+
+    TH1D* residualHist = new TH1D("NormalizedResidualsHist",Form("Normalized Residuals relative to %s",Dir[lowestDir].Data()),10,-4,4);
+    for(int j = 0; j < numVis; ++ j){
+      if (VisibilityRecorded[j]<LowestAllowedValue) continue;   // NOTE!  Excluding datapoints !!
+      residualHist->Fill((VisibilityRecorded[j]-ConstantFactors[lowestDir]*VisibilityCompare[j])/ErrorRecorded[j]);
+    }
+
+    gStyle->SetOptFit(1);
+    TCanvas* resCan = new TCanvas("NormalizedResiduals","Normalized Residuals",800,800);
+    resCan->Draw();
+    residualHist->Draw();
+    residualHist->Fit("gaus");
+    
+    resCan->Print("Overlay.pdf");
+
+
+
+    // Now we will use Minuit to do a legit multiparameter fit
+    // now lets make error contour with Minuit varying both C and diameter.  I set up a function
+    // InterpolateJason above
+    // nice tutorial at https://root.cern/doc/v610/Ifit_8C_source.html
+    // a very nice discussion of the error contours at https://root-forum.cern.ch/t/fit-error-contours/10220/18
+    
+    gStyle->SetOptStat(0);
+    
+    TH2D* UniformDiskModel = new TH2D("myFit"," 1 and 2 Sigma Error Contour",100,0.95,1.2,100, 11e-6, 17e-6);
+    UniformDiskModel->GetXaxis()->SetTitle("Angular Diameter (mas)");
+    UniformDiskModel->GetYaxis()->SetTitle("Normalization Constant");
+    UniformDiskModel->GetYaxis()->SetTitleOffset(1.2);
+    
+    TMinuit * gMinuit = new TMinuit(2);
+    gMinuit->SetFCN(InterpolateJason);
+    Double_t arglist[10];
+    Int_t ierflg=0;
+    arglist[0]=1;
+    gMinuit->mnexcm("SET ERR", arglist, 1, ierflg);
+    gMinuit->mnparm(0,"diameter",milliarcValues[lowestDir],0.003,0,0,ierflg);
+    gMinuit->mnparm(1,"Scaling",ConstantGraph->GetPointY(lowestDir),0.1,0,0,ierflg);
+    
+    arglist[0]=500;
+    arglist[1]=1.;
+    gMinuit->mnexcm("MIGRAD",arglist,2,ierflg);
+    TGraph* ErrorContour = (TGraph*)gMinuit->Contour(100,0,1); ErrorContour->SetLineWidth(3);
+    gMinuit->SetErrorDef(2);
+    TGraph* ErrorContour2 = (TGraph*)gMinuit->Contour(100,0,1); ErrorContour2->SetLineWidth(3); ErrorContour2->SetLineColor(14);
+    
+    TLine * CHARA = new TLine(1.15,  11e-6, 1.15, 17e-6); CHARA->SetLineColorAlpha(63, 0.35); CHARA->SetLineWidth(2);
+    TBox * CHARAError = new TBox(1.13, 11e-6, 1.17, 17e-6); CHARAError->SetFillColorAlpha(63, 0.15); 
+    
+    TLine * Keck = new TLine(1.08,  11e-6, 1.08, 17e-6); Keck->SetLineColorAlpha(205, 0.35); Keck->SetLineWidth(2);
+    TBox * KeckError = new TBox(1.01, 11e-6, 1.15, 17e-6); KeckError->SetFillColorAlpha(205, 0.15); 
+    
+    
+    TLegend * legend = new TLegend(0.1,0.7,0.45,0.9);
+    //legend->SetHeader("","C"); // option "C" allows to center the header
+    legend->AddEntry(ErrorContour," 1 Sigma Error Contour","l"); 
+    legend->AddEntry(ErrorContour2,"2 Sigma Error Contour","l"); 
+    legend->AddEntry(CHARA,"CHARA Measurement","l"); 
+    legend->AddEntry(Keck,"Keck Measurement","l"); 
+    legend->SetTextSize(0.025);
+    
+
+    TCanvas* errContCan = new TCanvas("ErrorContour","Error Contour",800,800);
+    UniformDiskModel->Draw();
+    Keck->Draw();
+    KeckError->Draw();
+    CHARA->Draw();
+    CHARAError->Draw();
+    legend->Draw();    
+    ErrorContour2->Draw("L, SAME");
+    ErrorContour->Draw("SAME");
+    
+    
+    errContCan->Print("Overlay.pdf)");
+
+    // okay, now let's see what the diameter error WOULD be IF we could fix the scaling parameter:
+
+  /*  cout << "\n\n Fixing the scaling parameter\n";
+    gMinuit->FixParameter(1);
+    gMinuit->mnexcm("MIGRAD",arglist,2,ierflg);*/
+
+    
+    return;
+}
+
+
+
+
+
+
