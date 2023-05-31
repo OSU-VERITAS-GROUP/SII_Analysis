@@ -1,4 +1,17 @@
 /*
+Mackenzie Scott -- Summer 2021 (with help of Mike Lisa) 
+
+This program aims to fit callibation data for investigation into the location of an extraneous beacon on the VERITAS site/  
+
+Compile/Execute as a root marco with:  root GeometricNoiseAnalysis.C
+
+There are no dependcies for this Macro
+
+*/
+
+
+
+/*
 // Here is when #4 moves but without the middle "data point" -> That shelf was not well defined
 const int npt=12;
 //Double_t theta[npt+1] = {0.0    , 1.0   , 2.0   , 3.0   , 4.0   ,  6.0  , 8.0   , 6.0   , 4.0   , 3.0   , 2.0};// deg

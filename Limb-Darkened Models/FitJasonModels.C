@@ -1,3 +1,18 @@
+/*
+
+Mackenzie Scott and Mike Lisa -- Winter 2022/23
+
+This program aims to fit models gerneated by Jason Aufdenburg (Embry-Riddle Aeronautical University) to the VERITAS 
+visibilities. The model visibilities must be in the same order and at the same baslines as the VERITAS visibilites. 
+
+This program should be run as a root Macro with: root FitJasonModels.C
+
+This code needs PointsOnVisibilityCurve.txt which are VERITAS visibilites and it needs a series 
+of Jason models to poulate Dir[numFiles]
+
+
+*/
+
 double JasonGrid[numFiles][numVis];
 double BaselineRecorded[numVis], BaseError[numVis], VisibilityRecorded[numVis], ErrorRecorded[numVis];
 double milliarcValues[numFiles];
@@ -6,6 +21,7 @@ double LowestAllowed_Global;
 // Use awk/grep to get Model paths and populate Dir[numFiles]
 const int numFiles = 122;
 const int numVis = 22; 
+
 TString Dir[numFiles] = {
 };
 

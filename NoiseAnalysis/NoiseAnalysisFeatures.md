@@ -8,8 +8,10 @@ We use sine and cosine fourier components now to remove the noise but it still t
 
 ## The Frequency!!
 
+The frequency of ***the*** noise is very apparent at 79.5 MHz. You can see this in both the correlated and uncorrelated data. However, we can get the most accurate reading of the frequency using the raw data since the precision of the FFt is a function of the number of points fed into the FFT. We can take at FFT of the Raw data with ***GoodFFT.cpp***. 
+
 ## Geometric Noise Analysis (Phase)
-Using the Phase Parameter we can extract important information about the location of our potential beacon. *GeometericNoiseAnalysis.C* contains callibation data of incramenetenting the telescopes at fitting with a point source noise model to find the location of the noise beacon. 
+Using the Phase Parameter we can extract important information about the location of our potential beacon. ***GeometericNoiseAnalysis.C*** contains callibation data of incramenetenting the telescopes at fitting with a point source noise model to find the location of the noise beacon. 
 
 *More of this data lives on the CHPC but I have not had a chance to analyze it*
 
