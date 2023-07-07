@@ -15,28 +15,39 @@ import math
 from datetime import datetime
 import subprocess
 
+with open('../config/Target.txt', 'r') as file:
+	TargetName = file.read().replace('\n','')
+
+with open('../config/StartAndEndTimesUTC.txt', 'r') as file:
+	data = file.readline()
+	start_observing_time = Time(data)
+	data = file.readline()
+	end_observing_time = Time(data)
+
+Target = SkyCoord.from_name(TargetName)
+
 #Run linux command to get available runs
-outputTime = subprocess.getoutput("ls -1 ../*/*.txt | awk '{print $1}'")
-TimeofRun = outputTime.split("\n")
+#outputTime = subprocess.getoutput("ls -1 ../*/*.txt | awk '{print $1}'")
+#TimeofRun = outputTime.split("\n")
 
 # Read in Nolan.txt headers to determine run parameters
-with open(str(TimeofRun[0]), 'r') as file:
-    for line in range(15):
-        data = file.readline()
-        Lines = data.split(',')
-        if Lines[0] == "SOURCE":     Source = Lines[1].rstrip('\n')
-        if Lines[0] == "DATE":       Date   = Lines[1].rstrip('\n')
-        if Lines[0] == "LOCAL_TIME": LTime  = Lines[1].rstrip('\n')
-        if Lines[0] == "TWINDOW_S":  Window = Lines[1].rstrip('\n')
-        if Lines[0] == "N_WINDOWS":  Frame  = Lines[1].rstrip('\n')
+#with open(str(TimeofRun[0]), 'r') as file:
+#    for line in range(15):
+#        data = file.readline()
+#        Lines = data.split(',')
+#        if Lines[0] == "SOURCE":     Source = Lines[1].rstrip('\n')
+#        if Lines[0] == "DATE":       Date   = Lines[1].rstrip('\n')
+#        if Lines[0] == "LOCAL_TIME": LTime  = Lines[1].rstrip('\n')
+#        if Lines[0] == "TWINDOW_S":  Window = Lines[1].rstrip('\n')
+#        if Lines[0] == "N_WINDOWS":  Frame  = Lines[1].rstrip('\n')
         
 #Configure Source and Time  
-TargetName = Source[:3] + ' ' + Source[3:]
-start_observing_time = Time(Date + ' ' + LTime )
-start_observing_time += TimeDelta(25200,format='sec') # Convert to UTC time 
-dt = TimeDelta(float(Window)*int(Frame), format='sec')
-end_observing_time = start_observing_time + dt
-Target = SkyCoord.from_name(TargetName)
+#TargetName = Source[:3] + ' ' + Source[3:]
+#start_observing_time = Time(Date + ' ' + LTime )
+#start_observing_time += TimeDelta(25200,format='sec') # Convert to UTC time 
+#dt = TimeDelta(float(Window)*int(Frame), format='sec')
+#end_observing_time = start_observing_time + dt
+#Target = SkyCoord.from_name(TargetName)
 
 ### Paramters for noise analysis 
 NoiseSourceLocation = [43.5, 55.5, 8.5]  # [0,0,0] would be the "middle" of the VERITAS site.
