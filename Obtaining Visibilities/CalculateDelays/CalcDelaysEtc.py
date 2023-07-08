@@ -27,11 +27,13 @@ import subprocess
 #Target = SkyCoord.from_name(TargetName)
 
 #Run linux command to get available runs
-outputTime = subprocess.getoutput("ls -1 /../*/*.txt | awk '{print $1}'")
+outputTime = subprocess.getoutput("ls -1 ../*/*.txt | awk '{print $1}'")
 TimeofRun = outputTime.split("\n")
 
+print(TimeofRun)
+
 # Read in Nolan.txt headers to determine run parameters
-with open(str(TimeofRun[0]+".txt"), 'r') as file:
+with open(str(TimeofRun[0]), 'r') as file:
     for line in range(15):
         data = file.readline()
         Lines = data.split(',')
@@ -110,7 +112,6 @@ RelNoisePhase = [np.empty([0]), np.empty([0]), np.empty([0]), np.empty([0]), np.
 
 observing_time = start_observing_time
 while observing_time < end_observing_time:
-    
     #Configure altitude and azimuth of star at given time 
 	AltAndAz = AltAz(location=Veritas, obstime=observing_time) 
 	ITRScoords = Target.transform_to(ITRS(obstime=observing_time))
@@ -121,12 +122,13 @@ while observing_time < end_observing_time:
 	azimuth = np.append(azimuth, az)
 	hrang = Veritas.lon.rad - ITRScoords.spherical.lon.rad
 	if abs(hrang) > 2*math.pi:
-	    if hrang > 0:
-	        hrang = hrang - (2*math.pi)
-	    else:
-	        hrang = hrang + (2*math.pi)
-	#print("ha: ", hrang)
+		if hrang > 2*math.pi:
+			hrang = hrang - (2*math.pi)
+		else: 
+			hrang = hrang + (2*math.pi)
+	#print("ha:", hrang)
 	decl = ITRScoords.spherical.lat.rad
+        
 	#print("dec: ", decl)
 	local_ha = np.append(local_ha, hrang)
 	local_dec = np.append(local_dec, decl)
