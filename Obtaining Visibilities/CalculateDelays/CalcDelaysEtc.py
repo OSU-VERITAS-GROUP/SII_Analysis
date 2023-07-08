@@ -27,11 +27,11 @@ import subprocess
 #Target = SkyCoord.from_name(TargetName)
 
 #Run linux command to get available runs
-outputTime = subprocess.getoutput("ls -1 ../*/*.txt | awk '{print $1}'")
+outputTime = subprocess.getoutput("ls -1 /../*/*.txt | awk '{print $1}'")
 TimeofRun = outputTime.split("\n")
 
 # Read in Nolan.txt headers to determine run parameters
-with open(str(TimeofRun[0]), 'r') as file:
+with open(str(TimeofRun[0]+".txt"), 'r') as file:
     for line in range(15):
         data = file.readline()
         Lines = data.split(',')
