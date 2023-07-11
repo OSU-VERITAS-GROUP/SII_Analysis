@@ -27,27 +27,32 @@ import subprocess
 #Target = SkyCoord.from_name(TargetName)
 
 #Run linux command to get available runs
-outputTime = subprocess.getoutput("ls -1 ../*/*.txt | awk '{print $1}'")
+outputTime = subprocess.getoutput("ls -1 ../*/corrOut*.txt | awk '{print $1}'")
 TimeofRun = outputTime.split("\n")
+#print(TimeofRun)
 
-print(TimeofRun)
+# Pick out the longest run 
+FrameLong = 0 
 
 # Read in Nolan.txt headers to determine run parameters
-with open(str(TimeofRun[0]), 'r') as file:
-    for line in range(15):
-        data = file.readline()
-        Lines = data.split(',')
-        if Lines[0] == "SOURCE":     Source = Lines[1].rstrip('\n')
-        if Lines[0] == "DATE":       Date   = Lines[1].rstrip('\n')
-        if Lines[0] == "LOCAL_TIME": LTime  = Lines[1].rstrip('\n')
-        if Lines[0] == "TWINDOW_S":  Window = Lines[1].rstrip('\n')
-        if Lines[0] == "N_WINDOWS":  Frame  = Lines[1].rstrip('\n')
-        
+for runpair in range(len(TimeofRun)):
+	with open(str(TimeofRun[runpair]), 'r') as file:
+		#print(TimeofRun[runpair])
+		for line in range(15):
+			data = file.readline()
+			Lines = data.split(',')
+			if Lines[0] == "SOURCE":     Source = Lines[1].rstrip('\n')
+			if Lines[0] == "DATE":       Date   = Lines[1].rstrip('\n')
+			if Lines[0] == "LOCAL_TIME": LTime  = Lines[1].rstrip('\n')
+			if Lines[0] == "TWINDOW_S":  Window = Lines[1].rstrip('\n')
+			if Lines[0] == "N_WINDOWS":  Frame  = Lines[1].rstrip('\n')
+		if int(Frame) > int(FrameLong):  FrameLong = Frame; 
+    
 #Configure Source and Time  
 TargetName = Source[:3] + ' ' + Source[3:]
 start_observing_time = Time(Date + ' ' + LTime )
 start_observing_time += TimeDelta(25200,format='sec') # Convert to UTC time 
-dt = TimeDelta(float(Window)*int(Frame), format='sec')
+dt = TimeDelta(float(Window)*int(FrameLong), format='sec')
 end_observing_time = start_observing_time + dt
 Target = SkyCoord.from_name(TargetName)
 
