@@ -64,25 +64,25 @@ void UniformDiskFit(){
   gStyle->SetStatFormat("6.2g");
   
   //Define Graphs to store the Data in 
-  TGraphErrors* tgGood = new TGraphErrors(); tgGood->SetMarkerStyle(20); tgGood->SetMarkerColor(4); //Graph of all Points that make the cuts
-  TGraphErrors* tgGoodSingle = new TGraphErrors(); tgGoodSingle->SetMarkerStyle(24); tgGoodSingle->SetMarkerColor(4); //Graph of all Points that make the cuts
-  TGraphErrors* tgCut  = new TGraphErrors(); tgCut->SetMarkerStyle(20); tgCut->SetMarkerColor(13); //Graph of points that don't make Muck cut
-  TGraphErrors* tgSNR  = new TGraphErrors(); tgSNR->SetMarkerStyle(20); tgSNR->SetMarkerColor(5);
-  //TGraphErrors* tgbg = new TGraphErrors(); tgbg->SetMarkerStyle(20); tgbg->SetMarkerColor(17); //keep track of background points RMS scatter
+  TGraphAsymmErrors* tgGood = new TGraphAsymmErrors(); tgGood->SetMarkerStyle(20); tgGood->SetMarkerColor(4); //Graph of all Points that make the cuts
+  TGraphAsymmErrors* tgGoodSingle = new TGraphAsymmErrors(); tgGoodSingle->SetMarkerStyle(24); tgGoodSingle->SetMarkerColor(4); //Graph of all Points that make the cuts
+  TGraphAsymmErrors* tgCut  = new TGraphAsymmErrors(); tgCut->SetMarkerStyle(20); tgCut->SetMarkerColor(13); //Graph of points that don't make Muck cut
+  TGraphAsymmErrors* tgSNR  = new TGraphAsymmErrors(); tgSNR->SetMarkerStyle(20); tgSNR->SetMarkerColor(5);
+  //TGraphAsymmErrors* tgbg = new TGraphAsymmErrors(); tgbg->SetMarkerStyle(20); tgbg->SetMarkerColor(17); //keep track of background points RMS scatter
     
   //Graph Points by telescope pair
-  TGraphErrors* tg12 = new TGraphErrors(); tg12->SetMarkerStyle(20); tg12->SetMarkerColor(1);
-  TGraphErrors* tg13 = new TGraphErrors(); tg13->SetMarkerStyle(20); tg13->SetMarkerColor(2);
-  TGraphErrors* tg14 = new TGraphErrors(); tg14->SetMarkerStyle(20); tg14->SetMarkerColor(3);
-  TGraphErrors* tg23 = new TGraphErrors(); tg23->SetMarkerStyle(20); tg23->SetMarkerColor(4);
-  TGraphErrors* tg24 = new TGraphErrors(); tg24->SetMarkerStyle(20); tg24->SetMarkerColor(6);
-  TGraphErrors* tg34 = new TGraphErrors(); tg34->SetMarkerStyle(20); tg34->SetMarkerColor(7);
+  TGraphErrorAsymms* tg12 = new TGraphAsymmErrors(); tg12->SetMarkerStyle(20); tg12->SetMarkerColor(1);
+  TGraphAsymmErrors* tg13 = new TGraphAsymmErrors(); tg13->SetMarkerStyle(20); tg13->SetMarkerColor(2);
+  TGraphAsymmErrors* tg14 = new TGraphAsymmErrors(); tg14->SetMarkerStyle(20); tg14->SetMarkerColor(3);
+  TGraphAsymmErrors* tg23 = new TGraphAsymmErrors(); tg23->SetMarkerStyle(20); tg23->SetMarkerColor(4);
+  TGraphAsymmErrors* tg24 = new TGraphAsymmErrors(); tg24->SetMarkerStyle(20); tg24->SetMarkerColor(6);
+  TGraphAsymmErrors* tg34 = new TGraphAsymmErrors(); tg34->SetMarkerStyle(20); tg34->SetMarkerColor(7);
     
   //Graph Points by month
-  TGraphErrors * tgmonth1 = new TGraphErrors(); tgmonth1->SetMarkerStyle(20); tgmonth1->SetMarkerColor(1);
-  TGraphErrors * tgmonth2 = new TGraphErrors(); tgmonth2->SetMarkerStyle(20); tgmonth2->SetMarkerColor(2);
-  TGraphErrors * tgmonth3 = new TGraphErrors(); tgmonth3->SetMarkerStyle(20); tgmonth3->SetMarkerColor(3);
-  TGraphErrors * tgmonth4 = new TGraphErrors(); tgmonth4->SetMarkerStyle(20); tgmonth4->SetMarkerColor(4);
+  TGraphAsymmErrors * tgmonth1 = new TGraphAsymmErrors(); tgmonth1->SetMarkerStyle(20); tgmonth1->SetMarkerColor(1);
+  TGraphAsymmErrors * tgmonth2 = new TGraphAsymmErrors(); tgmonth2->SetMarkerStyle(20); tgmonth2->SetMarkerColor(2);
+  TGraphAsymmErrors * tgmonth3 = new TGraphAsymmErrors(); tgmonth3->SetMarkerStyle(20); tgmonth3->SetMarkerColor(3);
+  TGraphAsymmErrors * tgmonth4 = new TGraphAsymmErrors(); tgmonth4->SetMarkerStyle(20); tgmonth4->SetMarkerColor(4);
     
   //Distribution histograms of background points
   TH1D * BackgroundPointProjectionCut = new TH1D("Cut Background Projection","Cut Background Projection", 50, -10e-6, 10e-6);
@@ -275,11 +275,15 @@ void UniformDiskFit(){
 
       // Calcuate Noise Level for a given runpair
       double SNRratio = CalcSNRRatio(HBTProj, PeakFit);
+      double BaseErrorLow  = 1000;
+      double BaseErrorHigh = -1;
       
       //Calculate Weighted Baselines
       double sumAveNum(0), sumAveDen(0), sumRMSTerm1Num(0);
       if(version > 0){ 
         for(int TimeSlice = start; TimeSlice <= end; TimeSlice++){
+          if(Baselines->GetPointY(TimeSlice) < BaseErrorLow){BaseErrorLow = Baselines->GetPointY(TimeSlice);}
+          if(Baselines->GetPointY(TimeSlice) > BaseErrorHigh){BaseErrorHigh = Baselines->GetPointY(TimeSlice);}
           sumAveNum += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice)*Baselines->GetPointY(TimeSlice);
           sumAveDen += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice);
           sumRMSTerm1Num += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice)*Baselines->GetPointY(TimeSlice)*Baselines->GetPointY(TimeSlice);
@@ -287,6 +291,8 @@ void UniformDiskFit(){
       }
       if(version < 0){
         for(int TimeSlice = start; TimeSlice <= end; TimeSlice++){
+          if(Baselines->GetPointY(TimeSlice) < BaseErrorLow){BaseErrorLow = Baselines->GetPointY(TimeSlice);}
+          if(Baselines->GetPointY(TimeSlice) > BaseErrorHigh){BaseErrorHigh = Baselines->GetPointY(TimeSlice);}
           TH1D* ADC1y = ADC1->ProjectionX("temp1",TimeSlice,TimeSlice);
           TH1D* ADC2y = ADC2->ProjectionX("temp2",TimeSlice,TimeSlice);
           sumAveNum += ADC1y->GetMean()*ADC2y->GetMean()*Baselines->GetPointY(TimeSlice);
@@ -297,7 +303,7 @@ void UniformDiskFit(){
             
       //Calculate the points and their errors
       double BasePoint  = abs(sumAveNum/sumAveDen);
-      double BaseError  = sqrt(sumRMSTerm1Num/sumAveDen - pow(BasePoint, 2));
+      //double BaseError  = sqrt(sumRMSTerm1Num/sumAveDen - pow(BasePoint, 2));
       double PointVal   = PeakFit->GetParameter(0); 
       double PointError = PeakFit->GetParError(0);  
             
@@ -332,7 +338,7 @@ void UniformDiskFit(){
       if(BasePoint <= ExpectPeaks){ //&& PointVal > RMSMuck  && PeakFit->GetParameter(0) > 2e-6
         gPad->SetFrameFillColor(33);
         tgGood->AddPoint(BasePoint, PointVal);
-        tgGood->SetPointError(nptsGood, BaseError, PointError);
+        tgGood->SetPointError(nptsGood, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError);
         ++nptsGood;
         GoodDirectories <<  DirName << "   " << splitNum << "   " << sectionloop << endl;
         GoodPointsSNR->Fill(SNRratio);
@@ -346,25 +352,25 @@ void UniformDiskFit(){
       
       if(SNRratio > 1.2){   
         tgSNR->AddPoint(BasePoint, PointVal);
-        tgSNR->SetPointError(nptsSNR, BaseError, PointError);
+        tgSNR->SetPointError(nptsSNR, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError);
         ++nptsSNR;
       }
       //---------------------------------------------------------------------------
       //---------------------------------------------------------------------------
             
       // Sort by Pair
-      if((tx==1 && ty==2) || (tx==2 && ty==1)){tg12->AddPoint(BasePoint, PointVal); tg12->SetPointError(nptsT1T2, BaseError, PointError); ++nptsT1T2;}
-      if((tx==1 && ty==3) || (tx==3 && ty==1)){tg13->AddPoint(BasePoint, PointVal); tg13->SetPointError(nptsT1T3, BaseError, PointError); ++nptsT1T3;}
-      if((tx==1 && ty==4) || (tx==4 && ty==1)){tg14->AddPoint(BasePoint, PointVal); tg14->SetPointError(nptsT1T4, BaseError, PointError); ++nptsT1T4;}
-      if((tx==2 && ty==3) || (tx==3 && ty==2)){tg23->AddPoint(BasePoint, PointVal); tg23->SetPointError(nptsT2T3, BaseError, PointError); ++nptsT2T3;}
-      if((tx==2 && ty==4) || (tx==4 && ty==2)){tg24->AddPoint(BasePoint, PointVal); tg24->SetPointError(nptsT2T4, BaseError, PointError); ++nptsT2T4;}
-      if((tx==3 && ty==4) || (tx==3 && ty==4)){tg34->AddPoint(BasePoint, PointVal); tg34->SetPointError(nptsT3T4, BaseError, PointError); ++nptsT3T4;}
+      if((tx==1 && ty==2) || (tx==2 && ty==1)){tg12->AddPoint(BasePoint, PointVal); tg12->SetPointError(nptsT1T2, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsT1T2;}
+      if((tx==1 && ty==3) || (tx==3 && ty==1)){tg13->AddPoint(BasePoint, PointVal); tg13->SetPointError(nptsT1T3, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsT1T3;}
+      if((tx==1 && ty==4) || (tx==4 && ty==1)){tg14->AddPoint(BasePoint, PointVal); tg14->SetPointError(nptsT1T4, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsT1T4;}
+      if((tx==2 && ty==3) || (tx==3 && ty==2)){tg23->AddPoint(BasePoint, PointVal); tg23->SetPointError(nptsT2T3, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsT2T3;}
+      if((tx==2 && ty==4) || (tx==4 && ty==2)){tg24->AddPoint(BasePoint, PointVal); tg24->SetPointError(nptsT2T4, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsT2T4;}
+      if((tx==3 && ty==4) || (tx==3 && ty==4)){tg34->AddPoint(BasePoint, PointVal); tg34->SetPointError(nptsT3T4, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsT3T4;}
       
       //Sort By Date
-      if(year == 2021 && month == 12){tgmonth1->AddPoint(BasePoint, PointVal); tgmonth1->SetPointError(nptsmonth1, BaseError, PointError); ++nptsmonth1;}
-      if(year == 2022 && month == 02){tgmonth2->AddPoint(BasePoint, PointVal); tgmonth2->SetPointError(nptsmonth2, BaseError, PointError); ++nptsmonth2;}
-      if(year == 2022 && month == 03){tgmonth3->AddPoint(BasePoint, PointVal); tgmonth3->SetPointError(nptsmonth3, BaseError, PointError); ++nptsmonth3;}   
-      if(year == 2022 && month == 05){tgmonth4->AddPoint(BasePoint, PointVal); tgmonth4->SetPointError(nptsmonth4, BaseError, PointError); ++nptsmonth4;}  
+      if(year == 2021 && month == 12){tgmonth1->AddPoint(BasePoint, PointVal); tgmonth1->SetPointError(nptsmonth1, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsmonth1;}
+      if(year == 2022 && month == 02){tgmonth2->AddPoint(BasePoint, PointVal); tgmonth2->SetPointError(nptsmonth2, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsmonth2;}
+      if(year == 2022 && month == 03){tgmonth3->AddPoint(BasePoint, PointVal); tgmonth3->SetPointError(nptsmonth3, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsmonth3;}   
+      if(year == 2022 && month == 05){tgmonth4->AddPoint(BasePoint, PointVal); tgmonth4->SetPointError(nptsmonth4, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsmonth4;}  
 
       //Print Publication Quality HBT Peaks 
       if((idir == 5 && sectionloop == 0) || (idir == 41 && sectionloop ==1)){
