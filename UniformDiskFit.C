@@ -7,14 +7,14 @@
 int Setup(int irun, TString& DirName, int& HumanFlag, int& splitNum);
 int RelativeTimeOffset(int tx, int ty);
 int RelativeTimeOffsetOlder(int tx, int ty);
-TF1 * HBTFit(TProfile * HBT, double relTimePar);
-TF1 * HBTFitAmp(TH1D * Noise, double relTimePar);
+TF1* HBTFit(TProfile* HBT, double relTimePar);
+TF1* HBTFitAmp(TH1D* Noise, double relTimePar);
 double CalcSNRRatio(TProfile * HBT, TF1 *PeakFit);
 void DrawGraph(TGraph * tgtemp, TF1 * Bess, TH1D * UnifDisk, const char * title);
 
 //Initial Fit Parameters
 double relTimeWindow(10);  //Maybe Change to 15!!
-double sigMin(3), sigMax(6);
+double sigMin(2.5), sigMax(5.5);
 double ExpectPeaks(90); 
 
 void UniformDiskFit(){
@@ -28,7 +28,7 @@ void UniformDiskFit(){
   TH1D *ADC1N, *ADC2N;
   TH2D *ADC1, *ADC2;
   int tx, ty, version, NumberOfFrames(0), nx(4), ny(3);
-  TDatime * ObsTime = 0;
+  TDatime* ObsTime = 0;
   float dtWindow;
     
   //Pass to SetUp function
@@ -37,17 +37,17 @@ void UniformDiskFit(){
   int nOnCan(0), nOnCanGood(0);
     
   //Create the Canvas for all of the HBT Peaks 
-  TCanvas * ManyGraphs = new TCanvas("Many Graphs", "Postage Stamps", 1200, 900);
+  TCanvas* ManyGraphs = new TCanvas("Many Graphs", "Postage Stamps", 1200, 900);
   ManyGraphs->Divide(nx,ny);
   ManyGraphs->Print("HBTStamps.pdf[");   // note bracket
     
   //Create a Canvas for only the "Good" HBT Peaks   
-  TCanvas * ManyGraphsGood = new TCanvas("Many Graphs Good", "Postage Stamps Good", 1200, 900);
+  TCanvas* ManyGraphsGood = new TCanvas("Many Graphs Good", "Postage Stamps Good", 1200, 900);
   ManyGraphsGood->Divide(nx,ny);
   ManyGraphsGood->Print("HBTStampsGood.pdf["); 
 
   //Create a Canvas for the entire realtive time window of all the "Good" HBT Peaks 
-  TCanvas * FullRelativeTimeGraphsGood = new TCanvas("Full Relative Time", "Full Relative Time ", 1200, 900);
+  TCanvas* FullRelativeTimeGraphsGood = new TCanvas("Full Relative Time", "Full Relative Time ", 1200, 900);
   FullRelativeTimeGraphsGood->Print("FullRelativeTimeHBTStamps.pdf[");   // note bracket
     
   //Plot Style for the graphs 
@@ -71,7 +71,7 @@ void UniformDiskFit(){
   //TGraphAsymmErrors* tgbg = new TGraphAsymmErrors(); tgbg->SetMarkerStyle(20); tgbg->SetMarkerColor(17); //keep track of background points RMS scatter
     
   //Graph Points by telescope pair
-  TGraphErrorAsymms* tg12 = new TGraphAsymmErrors(); tg12->SetMarkerStyle(20); tg12->SetMarkerColor(1);
+  TGraphAsymmErrors* tg12 = new TGraphAsymmErrors(); tg12->SetMarkerStyle(20); tg12->SetMarkerColor(1);
   TGraphAsymmErrors* tg13 = new TGraphAsymmErrors(); tg13->SetMarkerStyle(20); tg13->SetMarkerColor(2);
   TGraphAsymmErrors* tg14 = new TGraphAsymmErrors(); tg14->SetMarkerStyle(20); tg14->SetMarkerColor(3);
   TGraphAsymmErrors* tg23 = new TGraphAsymmErrors(); tg23->SetMarkerStyle(20); tg23->SetMarkerColor(4);
@@ -79,17 +79,17 @@ void UniformDiskFit(){
   TGraphAsymmErrors* tg34 = new TGraphAsymmErrors(); tg34->SetMarkerStyle(20); tg34->SetMarkerColor(7);
     
   //Graph Points by month
-  TGraphAsymmErrors * tgmonth1 = new TGraphAsymmErrors(); tgmonth1->SetMarkerStyle(20); tgmonth1->SetMarkerColor(1);
-  TGraphAsymmErrors * tgmonth2 = new TGraphAsymmErrors(); tgmonth2->SetMarkerStyle(20); tgmonth2->SetMarkerColor(2);
-  TGraphAsymmErrors * tgmonth3 = new TGraphAsymmErrors(); tgmonth3->SetMarkerStyle(20); tgmonth3->SetMarkerColor(3);
-  TGraphAsymmErrors * tgmonth4 = new TGraphAsymmErrors(); tgmonth4->SetMarkerStyle(20); tgmonth4->SetMarkerColor(4);
+  TGraphAsymmErrors* tgmonth1 = new TGraphAsymmErrors(); tgmonth1->SetMarkerStyle(20); tgmonth1->SetMarkerColor(1);
+  TGraphAsymmErrors* tgmonth2 = new TGraphAsymmErrors(); tgmonth2->SetMarkerStyle(20); tgmonth2->SetMarkerColor(2);
+  TGraphAsymmErrors* tgmonth3 = new TGraphAsymmErrors(); tgmonth3->SetMarkerStyle(20); tgmonth3->SetMarkerColor(3);
+  TGraphAsymmErrors* tgmonth4 = new TGraphAsymmErrors(); tgmonth4->SetMarkerStyle(20); tgmonth4->SetMarkerColor(4);
     
   //Distribution histograms of background points
-  TH1D * BackgroundPointProjectionCut = new TH1D("Cut Background Projection","Cut Background Projection", 50, -10e-6, 10e-6);
-  TH1D * BackgroundPointProjectionAll = new TH1D("All Background Projection","All Background Projection", 50, -10e-6, 10e-6);
-  TH1D * DataPointProjection = new TH1D("DataPointProjection","Data Point Projection", 72, -3.8e-6, 3.4e-6);
-  TH1D * GoodPointsSNR = new TH1D("GoodPointsSNR","GoodPointsSNR", 24, 0, 6);
-  TH1D * CutPointsSNR = new TH1D("CutPointsSNR","CutPointsSNR", 24, 0, 6);
+  TH1D* BackgroundPointProjectionCut = new TH1D("Cut Background Projection","Cut Background Projection", 50, -10e-6, 10e-6);
+  TH1D* BackgroundPointProjectionAll = new TH1D("All Background Projection","All Background Projection", 50, -10e-6, 10e-6);
+  TH1D* DataPointProjection = new TH1D("DataPointProjection","Data Point Projection", 72, -3.8e-6, 3.4e-6);
+  TH1D* GoodPointsSNR = new TH1D("GoodPointsSNR","GoodPointsSNR", 24, 0, 6);
+  TH1D* CutPointsSNR = new TH1D("CutPointsSNR","CutPointsSNR", 24, 0, 6);
     
   //Iterate over these for the different graphs 
   int nptsGood(0), nptsbg(0), nptsCut(0), nptsSNR(0);
@@ -117,7 +117,7 @@ void UniformDiskFit(){
     if (Setup(idir, DirName, HumanFlag, splitNum)==0) break;
         
     //Read in information from output file for each run 
-    TFile * CorrInfo = new TFile(Form("%s/Analysis.root", DirName.Data()), "READONLY");
+    TFile* CorrInfo = new TFile(Form("%s/Analysis.root", DirName.Data()), "READONLY");
     CorrInfo->GetObject("Header",header);
     header->SetBranchAddress("VersionBr",&version);
     header->SetBranchAddress("T1Br",&tx);       
@@ -153,18 +153,18 @@ void UniformDiskFit(){
       double sumAveNum(0), sumAveDen(0), sumRMSTerm1Num(0);
       if(version > 0){
         for(int TimeSlice = start; TimeSlice <= end; TimeSlice++){
-          sumAveNum += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice)*Baselines->GetPointY(TimeSlice);
+          sumAveNum += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice)*Baselines->GetPointY(TimeSlice-1);
           sumAveDen += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice);
-          sumRMSTerm1Num += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice)*Baselines->GetPointY(TimeSlice)*Baselines->GetPointY(TimeSlice);
+          sumRMSTerm1Num += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice)*Baselines->GetPointY(TimeSlice-1)*Baselines->GetPointY(TimeSlice-1);
         }
       }
       if(version < 0){
         for(int TimeSlice = start; TimeSlice <= end; TimeSlice++){
           TH1D* ADC1y = ADC1->ProjectionX("temp1",TimeSlice,TimeSlice);
           TH1D* ADC2y = ADC2->ProjectionX("temp2",TimeSlice,TimeSlice);
-          sumAveNum += ADC1y->GetMean()*ADC2y->GetMean()*Baselines->GetPointY(TimeSlice);
+          sumAveNum += ADC1y->GetMean()*ADC2y->GetMean()*Baselines->GetPointY(TimeSlice-1);
           sumAveDen += ADC1y->GetMean()*ADC2y->GetMean();
-          sumRMSTerm1Num += ADC1y->GetMean()*ADC2y->GetMean()*Baselines->GetPointY(TimeSlice)*Baselines->GetPointY(TimeSlice);
+          sumRMSTerm1Num += ADC1y->GetMean()*ADC2y->GetMean()*Baselines->GetPointY(TimeSlice-1)*Baselines->GetPointY(TimeSlice-1);
         }
       }
             
@@ -206,12 +206,14 @@ void UniformDiskFit(){
 //------------------------------------------------------------------------------
 
   //Define file to write to throuhout loop
-  ofstream GoodDirectories, ZeroDirectories, RelTauPars, flags;
+  ofstream GoodDirectories, ZeroDirectories, RelTauPars, flags, vispts;
   GoodDirectories.open ("GoodDirectories.txt");
   ZeroDirectories.open ("ZeroDirectories.txt");
   RelTauPars.open ("RelativeTauList.txt");
   flags.open("checkFlags.txt");
+  vispts.open("visPts.txt");
   flags << "txty  flag  par0   par1   par2" << endl;
+  vispts << "index dir                    split  flag baseline  baseErrLo baseErrHi  visibility  visErr" << endl;
     
     
   //Loop over all the runs/pairs 
@@ -282,22 +284,22 @@ void UniformDiskFit(){
       double sumAveNum(0), sumAveDen(0), sumRMSTerm1Num(0);
       if(version > 0){ 
         for(int TimeSlice = start; TimeSlice <= end; TimeSlice++){
-          if(Baselines->GetPointY(TimeSlice) < BaseErrorLow){BaseErrorLow = Baselines->GetPointY(TimeSlice);}
-          if(Baselines->GetPointY(TimeSlice) > BaseErrorHigh){BaseErrorHigh = Baselines->GetPointY(TimeSlice);}
-          sumAveNum += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice)*Baselines->GetPointY(TimeSlice);
-          sumAveDen += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice);
-          sumRMSTerm1Num += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice)*Baselines->GetPointY(TimeSlice)*Baselines->GetPointY(TimeSlice);
+            if(abs(Baselines->GetPointY(TimeSlice-1)) < BaseErrorLow){BaseErrorLow = abs(Baselines->GetPointY(TimeSlice-1));}
+            if(abs(Baselines->GetPointY(TimeSlice-1)) > BaseErrorHigh){BaseErrorHigh = abs(Baselines->GetPointY(TimeSlice-1));}
+            sumAveNum += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice)*Baselines->GetPointY(TimeSlice-1);
+            sumAveDen += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice);
+            sumRMSTerm1Num += ADC1N->GetBinContent(TimeSlice)*ADC2N->GetBinContent(TimeSlice)*Baselines->GetPointY(TimeSlice-1)*Baselines->GetPointY(TimeSlice-1);
         }
       }
       if(version < 0){
         for(int TimeSlice = start; TimeSlice <= end; TimeSlice++){
-          if(Baselines->GetPointY(TimeSlice) < BaseErrorLow){BaseErrorLow = Baselines->GetPointY(TimeSlice);}
-          if(Baselines->GetPointY(TimeSlice) > BaseErrorHigh){BaseErrorHigh = Baselines->GetPointY(TimeSlice);}
-          TH1D* ADC1y = ADC1->ProjectionX("temp1",TimeSlice,TimeSlice);
-          TH1D* ADC2y = ADC2->ProjectionX("temp2",TimeSlice,TimeSlice);
-          sumAveNum += ADC1y->GetMean()*ADC2y->GetMean()*Baselines->GetPointY(TimeSlice);
-          sumAveDen += ADC1y->GetMean()*ADC2y->GetMean();
-          sumRMSTerm1Num += ADC1y->GetMean()*ADC2y->GetMean()*Baselines->GetPointY(TimeSlice)*Baselines->GetPointY(TimeSlice);
+            if(abs(Baselines->GetPointY(TimeSlice-1)) < BaseErrorLow){BaseErrorLow = abs(Baselines->GetPointY(TimeSlice-1));}
+            if(abs(Baselines->GetPointY(TimeSlice-1)) > BaseErrorHigh){BaseErrorHigh = abs(Baselines->GetPointY(TimeSlice-1));}
+            TH1D* ADC1y = ADC1->ProjectionX("temp1",TimeSlice,TimeSlice);
+            TH1D* ADC2y = ADC2->ProjectionX("temp2",TimeSlice,TimeSlice);
+            sumAveNum += ADC1y->GetMean()*ADC2y->GetMean()*Baselines->GetPointY(TimeSlice-1);
+            sumAveDen += ADC1y->GetMean()*ADC2y->GetMean();
+            sumRMSTerm1Num += ADC1y->GetMean()*ADC2y->GetMean()*Baselines->GetPointY(TimeSlice-1)*Baselines->GetPointY(TimeSlice-1);
         }
       }
             
@@ -315,6 +317,7 @@ void UniformDiskFit(){
       if(tempImport != 0){HumanFlag = tempImport;}
       
       flags << tx << ty << "  " << HumanFlag << "  " << PeakFit->GetParameter(0) << "  " << PeakFit->GetParameter(1) << "  " << PeakFit->GetParameter(2) << endl;
+      vispts << idir << "  " << DirName.Data() << "  " << splitNum << "  " << HumanFlag << " " << BasePoint << "  " << BaseErrorLow << "  " << BaseErrorHigh << "  " << PointVal << "  " << PointError << endl;
       
       //Set Title and Offset
       HBTProj->SetTitle(Form("%d.%d) %s B =%6.1f Flag = %d ;Relative Time (ns); g^{2}(0)-1", idir, sectionloop, DirName.Data(), BasePoint, HumanFlag));
@@ -338,7 +341,7 @@ void UniformDiskFit(){
       if(BasePoint <= ExpectPeaks){ //&& PointVal > RMSMuck  && PeakFit->GetParameter(0) > 2e-6
         gPad->SetFrameFillColor(33);
         tgGood->AddPoint(BasePoint, PointVal);
-        tgGood->SetPointError(nptsGood, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError);
+        tgGood->SetPointError(nptsGood, BasePoint-BaseErrorLow, BaseErrorHigh-BasePoint, PointError, PointError);
         ++nptsGood;
         GoodDirectories <<  DirName << "   " << splitNum << "   " << sectionloop << endl;
         GoodPointsSNR->Fill(SNRratio);
@@ -352,33 +355,33 @@ void UniformDiskFit(){
       
       if(SNRratio > 1.2){   
         tgSNR->AddPoint(BasePoint, PointVal);
-        tgSNR->SetPointError(nptsSNR, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError);
+        tgSNR->SetPointError(nptsSNR, BasePoint-BaseErrorLow, BaseErrorHigh-BasePoint, PointError, PointError);
         ++nptsSNR;
       }
       //---------------------------------------------------------------------------
       //---------------------------------------------------------------------------
             
       // Sort by Pair
-      if((tx==1 && ty==2) || (tx==2 && ty==1)){tg12->AddPoint(BasePoint, PointVal); tg12->SetPointError(nptsT1T2, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsT1T2;}
-      if((tx==1 && ty==3) || (tx==3 && ty==1)){tg13->AddPoint(BasePoint, PointVal); tg13->SetPointError(nptsT1T3, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsT1T3;}
-      if((tx==1 && ty==4) || (tx==4 && ty==1)){tg14->AddPoint(BasePoint, PointVal); tg14->SetPointError(nptsT1T4, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsT1T4;}
-      if((tx==2 && ty==3) || (tx==3 && ty==2)){tg23->AddPoint(BasePoint, PointVal); tg23->SetPointError(nptsT2T3, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsT2T3;}
-      if((tx==2 && ty==4) || (tx==4 && ty==2)){tg24->AddPoint(BasePoint, PointVal); tg24->SetPointError(nptsT2T4, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsT2T4;}
-      if((tx==3 && ty==4) || (tx==3 && ty==4)){tg34->AddPoint(BasePoint, PointVal); tg34->SetPointError(nptsT3T4, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsT3T4;}
+      if((tx==1 && ty==2) || (tx==2 && ty==1)){tg12->AddPoint(BasePoint, PointVal); tg12->SetPointError(nptsT1T2, BasePoint-BaseErrorLow, BaseErrorHigh-BasePoint, PointError, PointError); ++nptsT1T2;}
+      if((tx==1 && ty==3) || (tx==3 && ty==1)){tg13->AddPoint(BasePoint, PointVal); tg13->SetPointError(nptsT1T3, BasePoint-BaseErrorLow, BaseErrorHigh-BasePoint, PointError, PointError); ++nptsT1T3;}
+      if((tx==1 && ty==4) || (tx==4 && ty==1)){tg14->AddPoint(BasePoint, PointVal); tg14->SetPointError(nptsT1T4, BasePoint-BaseErrorLow, BaseErrorHigh-BasePoint, PointError, PointError); ++nptsT1T4;}
+      if((tx==2 && ty==3) || (tx==3 && ty==2)){tg23->AddPoint(BasePoint, PointVal); tg23->SetPointError(nptsT2T3, BasePoint-BaseErrorLow, BaseErrorHigh-BasePoint, PointError, PointError); ++nptsT2T3;}
+      if((tx==2 && ty==4) || (tx==4 && ty==2)){tg24->AddPoint(BasePoint, PointVal); tg24->SetPointError(nptsT2T4, BasePoint-BaseErrorLow, BaseErrorHigh-BasePoint, PointError, PointError); ++nptsT2T4;}
+      if((tx==3 && ty==4) || (tx==3 && ty==4)){tg34->AddPoint(BasePoint, PointVal); tg34->SetPointError(nptsT3T4, BasePoint-BaseErrorLow, BaseErrorHigh-BasePoint, PointError, PointError); ++nptsT3T4;}
       
       //Sort By Date
-      if(year == 2021 && month == 12){tgmonth1->AddPoint(BasePoint, PointVal); tgmonth1->SetPointError(nptsmonth1, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsmonth1;}
-      if(year == 2022 && month == 02){tgmonth2->AddPoint(BasePoint, PointVal); tgmonth2->SetPointError(nptsmonth2, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsmonth2;}
-      if(year == 2022 && month == 03){tgmonth3->AddPoint(BasePoint, PointVal); tgmonth3->SetPointError(nptsmonth3, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsmonth3;}   
-      if(year == 2022 && month == 05){tgmonth4->AddPoint(BasePoint, PointVal); tgmonth4->SetPointError(nptsmonth4, BaseErrorLow, BaseErrorHigh, PointVal-PointError, PointVal+PointError); ++nptsmonth4;}  
+      if(year == 2021 && month == 12){tgmonth1->AddPoint(BasePoint, PointVal); tgmonth1->SetPointError(nptsmonth1, BasePoint-BaseErrorLow, BaseErrorHigh-BasePoint, PointError, PointError); ++nptsmonth1;}
+      if(year == 2022 && month == 02){tgmonth2->AddPoint(BasePoint, PointVal); tgmonth2->SetPointError(nptsmonth2, BasePoint-BaseErrorLow, BaseErrorHigh-BasePoint, PointError, PointError); ++nptsmonth2;}
+      if(year == 2022 && month == 03){tgmonth3->AddPoint(BasePoint, PointVal); tgmonth3->SetPointError(nptsmonth3, BasePoint-BaseErrorLow, BaseErrorHigh-BasePoint, PointError, PointError); ++nptsmonth3;}   
+      if(year == 2022 && month == 05){tgmonth4->AddPoint(BasePoint, PointVal); tgmonth4->SetPointError(nptsmonth4, BasePoint-BaseErrorLow, BaseErrorHigh-BasePoint, PointError, PointError); ++nptsmonth4;}  
 
       //Print Publication Quality HBT Peaks 
       if((idir == 5 && sectionloop == 0) || (idir == 41 && sectionloop ==1)){
         gStyle->SetOptFit(0);
-        TCanvas * GoodGraphs = new TCanvas("Good Graphs", "Postage Stamps", 1200, 900);
+        TCanvas* GoodGraphs = new TCanvas("Good Graphs", "Postage Stamps", 1200, 900);
         HBTProj->SetTitle(";Relative Time (ns); g^{2}(0)-1");
         HBTProj->Draw(); //left->Draw(); right->Draw();
-        TPaveText *statsbox=new TPaveText(0.63,0.7,0.9,0.9,"brNDC");
+        TPaveText* statsbox=new TPaveText(0.63,0.7,0.9,0.9,"brNDC");
         statsbox->SetBorderSize(1);
         statsbox->SetTextAlign(12);
         statsbox->SetTextFont(42); statsbox->SetTextSize(0.033);
@@ -401,8 +404,8 @@ void UniformDiskFit(){
       HBTProj->GetYaxis()->SetTitleOffset(1.0); 
       HBTProj->Draw();
       
-      TLine * left = new TLine(relTimePar-relTimeWindow,HBTProj->GetMinimum(),relTimePar-relTimeWindow,HBTProj->GetMaximum());  left->SetLineWidth(2);  left->Draw();
-      TLine * right = new TLine(relTimePar+relTimeWindow,HBTProj->GetMinimum(),relTimePar+relTimeWindow,HBTProj->GetMaximum()); right->SetLineWidth(2); right->Draw();
+      TLine* left = new TLine(relTimePar-relTimeWindow,HBTProj->GetMinimum(),relTimePar-relTimeWindow,HBTProj->GetMaximum());  left->SetLineWidth(2);  left->Draw();
+      TLine* right = new TLine(relTimePar+relTimeWindow,HBTProj->GetMinimum(),relTimePar+relTimeWindow,HBTProj->GetMaximum()); right->SetLineWidth(2); right->Draw();
       //TLine * Muck = new TLine(-256, AveBackgroundAmp, 256, AveBackgroundAmp);  Muck->SetLineWidth(2);  Muck->Draw();
       //TLine * Signal = new TLine(-256, PeakAmpReal, 256, PeakAmpReal); Signal->SetLineWidth(2); Signal->Draw();
       gPad->Update(); TPaveStats *st = (TPaveStats*)HBTProj->FindObject("stats"); st->Draw();
@@ -412,14 +415,14 @@ void UniformDiskFit(){
         nOnCanGood++;
         ManyGraphsGood->cd(nOnCanGood); 
         HBTProj->Draw();
-        TLine * left = new TLine(relTimePar-relTimeWindow,HBTProj->GetMinimum(),relTimePar-relTimeWindow,HBTProj->GetMaximum());  left->SetLineWidth(2);  left->Draw();
-        TLine * right = new TLine(relTimePar+relTimeWindow,HBTProj->GetMinimum(),relTimePar+relTimeWindow,HBTProj->GetMaximum()); right->SetLineWidth(2); right->Draw();
+        TLine* left = new TLine(relTimePar-relTimeWindow,HBTProj->GetMinimum(),relTimePar-relTimeWindow,HBTProj->GetMaximum());  left->SetLineWidth(2);  left->Draw();
+        TLine* right = new TLine(relTimePar+relTimeWindow,HBTProj->GetMinimum(),relTimePar+relTimeWindow,HBTProj->GetMaximum()); right->SetLineWidth(2); right->Draw();
         gPad->Update(); TPaveStats *st = (TPaveStats*)HBTProj->FindObject("stats"); st->Draw();
       }
             
       //Draw Read line if point is removed 
       if(HumanFlag < 0 || HumanFlag > 1){
-        TLine * BadRun = new TLine(HBTProj->GetXaxis()->GetXmin(), HBTProj->GetMinimum(), HBTProj->GetXaxis()->GetXmax(), HBTProj->GetMaximum());
+        TLine* BadRun = new TLine(HBTProj->GetXaxis()->GetXmin(), HBTProj->GetMinimum(), HBTProj->GetXaxis()->GetXmax(), HBTProj->GetMaximum());
         BadRun->SetLineColor(kRed); BadRun->Draw();
       }
 
@@ -436,6 +439,7 @@ void UniformDiskFit(){
   ZeroDirectories.close();
   RelTauPars.close();
   flags.close();
+  vispts.close();
   ManyGraphs->Print("HBTStamps.pdf");
   ManyGraphsGood->Print("HBTStampsGood.pdf)");
   FullRelativeTimeGraphsGood->Print("FullRelativeTimeHBTStamps.pdf)"); 
@@ -471,8 +475,8 @@ void UniformDiskFit(){
     cout << "SumAveVisClump3:" << SumAveVisClump3 << "SumErrVisClump3:" << SumErrVisClump3 << "SumAveBaseClump3:" << SumAveBaseClump3 << "SumErrVisClump3:" << SumErrBaseClump3 << endl;
     
     
-    tgGood->AddPoint(SumAveBaseClump1, 0); tgGood->SetPointError(nptsGood, SumErrBaseClump1, RMSMuck);
-    tgGoodSingle->AddPoint(SumAveBaseClump1, 0); tgGoodSingle->SetPointError(0, SumErrBaseClump1, RMSMuck);
+    tgGood->AddPoint(SumAveBaseClump1, 0); tgGood->SetPointError(nptsGood, SumAveBaseClump1-SumErrBaseClump1, SumAveBaseClump1-SumErrBaseClump1, RMSMuck, RMSMuck);
+    tgGoodSingle->AddPoint(SumAveBaseClump1, 0); tgGoodSingle->SetPointError(0, SumAveBaseClump1-SumErrBaseClump1, SumAveBaseClump1-SumErrBaseClump1, RMSMuck, RMSMuck);
     
    // tgGood->AddPoint(SumAveBaseClump2, 0); tgGood->SetPointError(nptsGood, SumErrBaseClump2, RMSMuck); ++nptsGood;
     //tgGood->AddPoint(SumAveBaseClump3, 0); tgGood->SetPointError(nptsGood, SumErrBaseClump3, RMSMuck); ++nptsGood;
@@ -493,16 +497,16 @@ void UniformDiskFit(){
     UniformDiskModel->GetXaxis()->SetTitle("Projected Baseline (m)");
     UniformDiskModel->GetYaxis()->SetTitle("Area Under g^{2}(0)-1 Curve (ns)"); UniformDiskModel->GetYaxis()->SetTitleOffset(1.1); //g^{2}(0)-1
     
-    TGaxis * NormalizedAxis = new TGaxis(200,-4e-6,200,1.5e-5,-4e-6/BessFit->GetParameter(0),1.5e-5/BessFit->GetParameter(0), 510,"+L");
+    TGaxis* NormalizedAxis = new TGaxis(200,-4e-6,200,1.5e-5,-4e-6/BessFit->GetParameter(0),1.5e-5/BessFit->GetParameter(0), 510,"+L");
     NormalizedAxis->SetTitle("Model Dependent Squared Visibilities"); 
     NormalizedAxis->SetLabelFont(42); NormalizedAxis->SetLabelSize(0.04); NormalizedAxis->SetLabelOffset(0.01);
     NormalizedAxis->SetTitleFont(42); NormalizedAxis->SetTitleSize(0.04); NormalizedAxis->SetTitleOffset(1.1);
     
-    TPaveText *r=new TPaveText(0.50,0.7,0.9,0.9,"brNDC");
+    TPaveText* r=new TPaveText(0.50,0.7,0.9,0.9,"brNDC");
     r->SetBorderSize(1);
     r->SetTextFont(42); r->SetTextSize(0.035);
     r->AddText(Form("#chi^{2}/ndf   %3.1lf / %d",BessFit->GetChisquare(),BessFit->GetNDF()));
-    r->AddText(Form("Normalization  %3.1le #pm %3.1le",BessFit->GetParameter(0), BessFit->GetParError(0)));
+    r->AddText(Form("C_{UD} (ns^{-1})  %3.1le #pm %3.1le",BessFit->GetParameter(0), BessFit->GetParError(0)));
     r->AddText(Form("#theta_{UD} (mas)   %3.2lf #pm %3.2lf",BessFit->GetParameter(1), BessFit->GetParError(1)));
     r->SetFillColor(kWhite);
     gStyle->SetOptFit(1);
@@ -511,7 +515,7 @@ void UniformDiskFit(){
     for(int i=0; i < tgGood->GetN(); ++i){out << tgGood->GetPointX(i) << "    " <<  tgGood->GetErrorX(i) << "    " << tgGood->GetPointY(i)  << "   " << tgGood->GetErrorY(i) << "   " << tgGood->GetPointY(i)/BessFit->GetParameter(0) << "   " <<  tgGood->GetErrorY(i)/BessFit->GetParameter(0) << endl;}
 
     //---------------- All Points ------------------
-    TCanvas * AllPoints = new TCanvas("All Points","All Points",1200,900);
+    TCanvas* AllPoints = new TCanvas("All Points","All Points",1200,900);
     UniformDiskModel->Draw();
     //MuckBounds->Draw("Same");
     //MuckBoundsOutter->Draw("Same");
@@ -522,11 +526,21 @@ void UniformDiskFit(){
     r->Draw();
     NormalizedAxis->Draw("same");
     AllPoints->Print("HBTStamps.pdf");
+    
+    TFile* curveOutFile = new TFile("curve.root","RECREATE");
+    UniformDiskModel->Write("UniformDiskModel");
+    tgGood->Write("tgGood");
+    tgCut->Write("tgCut");
+    tgGoodSingle->Write("tgSingle");
+    BessFit->Write("bessfit");
+    r->Write("r");
+    NormalizedAxis->Write("normaxis");
+    curveOutFile->Close();
 
     //-------------- Pair Points ---------------
-    TCanvas *TelescopePoints = new TCanvas("Telescope Pairs","Telescope Pairs",1200,900);
+    TCanvas* TelescopePoints = new TCanvas("Telescope Pairs","Telescope Pairs",1200,900);
     
-    TLegend * legend = new TLegend(0.65,0.65,0.9,0.9);
+    TLegend* legend = new TLegend(0.65,0.65,0.9,0.9);
     legend->SetHeader("Telescope Pairs","C"); // option "C" allows to center the header
     legend->AddEntry(tg12,"T1T2","p"); legend->AddEntry(tg13,"T1T3","p");
     legend->AddEntry(tg14,"T1T4","p"); legend->AddEntry(tg23,"T2T3","p");
@@ -541,9 +555,9 @@ void UniformDiskFit(){
     TelescopePoints->Print("HBTStamps.pdf");
     
     // ---------- Date Points ---------------
-    TCanvas *DatePoints = new TCanvas("Dates","Dates",1200,900);
+    TCanvas* DatePoints = new TCanvas("Dates","Dates",1200,900);
 
-    TLegend * legend2 = new TLegend(0.7,0.7,0.9,0.9);
+    TLegend* legend2 = new TLegend(0.7,0.7,0.9,0.9);
     legend2->SetHeader("Telescope Pairs","C"); // option "C" allows to center the header
     legend2->AddEntry(tgmonth1,"Dec 2021","p"); legend2->AddEntry(tgmonth2,"Feb 2022","p");
     legend2->AddEntry(tgmonth3,"Mar 2022","p"); legend2->AddEntry(tgmonth4,"May 2022","p");
@@ -570,11 +584,11 @@ void UniformDiskFit(){
     DrawGraph(tgmonth3, BessFit, UniformDiskModel, "Mar 2022 Data Points Only");
     DrawGraph(tgmonth4, BessFit, UniformDiskModel, "May 2022 Data Points Only");
     
-    TCanvas * BackGroundPoint = new TCanvas("All Background Points","All Background Points",1200,900);
+    TCanvas* BackGroundPoint = new TCanvas("All Background Points","All Background Points",1200,900);
     BackgroundPointProjectionAll->Draw();
     BackGroundPoint->Print("HBTStamps.pdf");
     
-    TCanvas * BackGroundPointCut = new TCanvas("Cut Background Points","Cut Background Points",1200,900);
+    TCanvas* BackGroundPointCut = new TCanvas("Cut Background Points","Cut Background Points",1200,900);
     BackgroundPointProjectionCut->Draw();
     BackGroundPointCut->Print("HBTStamps.pdf");
     
@@ -582,12 +596,12 @@ void UniformDiskFit(){
     DataPointProjection->Write();
     outputFile->Close();
 
-    TCanvas * DataPointCan = new TCanvas("Long Baseline Point Projection","Long Baseline Point Projection",1200,900);
+    TCanvas* DataPointCan = new TCanvas("Long Baseline Point Projection","Long Baseline Point Projection",1200,900);
     DataPointProjection->Draw();
     DataPointCan->Print("HBTStamps.pdf");
 
     
-    TCanvas * SNRDist = new TCanvas("SNRDist","SNRDist",1200,900);
+    TCanvas* SNRDist = new TCanvas("SNRDist","SNRDist",1200,900);
     CutPointsSNR->SetLineColor(kRed);
     CutPointsSNR->Draw();
     GoodPointsSNR->Draw("SAME");
@@ -602,10 +616,10 @@ void UniformDiskFit(){
     TGraph* Delays;
     TGraph* pythonBaselines;
     TGraph* Baseline; 
-    TCanvas * ManyHeatMaps = new TCanvas("Many HeatMaps", "Postage Maps", 1600, 1200);
-    TCanvas * ManyFFTs = new TCanvas("Many FFTs", "Many FFTs", 1600, 1200);
-    TCanvas * ManyDelays = new TCanvas("ManyDelays","opds",1600,1200);
-    TCanvas * ManyBaselines = new TCanvas("ManyBaselines","baselines",1600,1200);
+    TCanvas* ManyHeatMaps = new TCanvas("Many HeatMaps", "Postage Maps", 1600, 1200);
+    TCanvas* ManyFFTs = new TCanvas("Many FFTs", "Many FFTs", 1600, 1200);
+    TCanvas* ManyDelays = new TCanvas("ManyDelays","opds",1600,1200);
+    TCanvas* ManyBaselines = new TCanvas("ManyBaselines","baselines",1600,1200);
     ManyHeatMaps->Divide(nx,ny);
     ManyHeatMaps->Print("HBTMaps.pdf[");
     ManyFFTs->Divide(nx,ny);
