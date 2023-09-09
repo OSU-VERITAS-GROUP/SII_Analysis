@@ -331,7 +331,7 @@ void UniformDiskFit(){
       HBTProj->Draw();
       FullRelativeTimeGraphsGood->Print("FullRelativeTimeHBTStamps.pdf"); 
 
-      if(BasePoint > 90  && BasePoint <= 105){SumAveVisClump1 += PointVal; SumErrVisClump1 += pow(PointVal,2); SumAveBaseClump1 += BasePoint; SumErrBaseClump1 += pow(BasePoint,2); ++nptsClump1; ZeroDirectories << "/betUMa/" <<  DirName << endl;}
+      if(BasePoint > 90  && BasePoint <= 105){SumAveVisClump1 += PointVal; SumErrVisClump1 += pow(PointVal,2); SumAveBaseClump1 += BasePoint; SumErrBaseClump1 += pow(BasePoint,2); ++nptsClump1; ZeroDirectories << "/betUMa/" <<  DirName << "  " << splitNum << "   " << sectionloop << endl;}
       if(BasePoint > 105 && BasePoint <= 150){SumAveVisClump2 += PointVal; SumErrVisClump2 += pow(PointVal,2); SumAveBaseClump2 += BasePoint; SumErrBaseClump2 += pow(BasePoint,2); ++nptsClump2;}
       if(BasePoint > 150)                    {SumAveVisClump3 += PointVal; SumErrVisClump3 += pow(PointVal,2); SumAveBaseClump3 += BasePoint; SumErrBaseClump3 += pow(BasePoint,2); ++nptsClump3;}
             
