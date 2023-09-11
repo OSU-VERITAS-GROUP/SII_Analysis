@@ -64,7 +64,8 @@ CameraRadius        = 14                 # the distance of the camera from the p
 ### Location of VERITAS, telescopes, and Length of cables
 Veritas      = EarthLocation(lat='31.675', lon='-110.952', height='1270')  #location of veritas
 # telLocs      = np.array([[135.48, -8.61, 12.23],[44.1, -47.7, 4.4],[29.4, 60.1, 9.8],[-35.9, 11.3, 7.0]]) # old McGill/ASIIP coordinates
-telLocs      = np.array([[135.49, -8.72, 7.23], [45.145, -49.115, -0.94], [28.86, 60.73, 4.51], [-36.112, 11.696, 1.63]]) # these are the 2011 database coordinates, and we think the most trusted
+# telLocs      = np.array([[135.49, -8.72, 7.23], [45.145, -49.115, -0.94], [28.86, 60.73, 4.51], [-36.112, 11.696, 1.63]]) # these are the 2011 database coordinates, and we think the most trusted
+telLocs        = np.array([[135.48, -8.61, 12.23], [44.836, -49.601, 5.102], [29.335, 60.022, 10.636], [-35.885, 11.742, 6.417]]) # measured by Dave 2023, to cm precision
 CableDelays  = [676.8e-9, 585.0e-9, 955.0e-9, 1063.7e-9] #Cable lengths for all 4 telescopes 
 bucketLength = 4e-9
 
