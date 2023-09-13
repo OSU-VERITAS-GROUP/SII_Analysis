@@ -13,15 +13,16 @@ of Jason models to populate Dir[numFiles]
 
 */
 
+const int numFiles = 122;
+const int numVis = 22; 
+int numZero = 20; 
+
 double JasonGrid[numFiles][numVis];
 double BaselineRecorded[numVis], BaseError[numVis], VisibilityRecorded[numVis], ErrorRecorded[numVis];
 double milliarcValues[numFiles];
 double LowestAllowed_Global;
     
 // Use awk/grep to get Model paths and populate Dir[numFiles]
-const int numFiles = 122;
-const int numVis = 22; 
-int numZero = 20; 
 
 TString Dir[numFiles] = {
 };
