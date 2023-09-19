@@ -480,16 +480,25 @@ void UniformDiskFit(){
     
    // tgGood->AddPoint(SumAveBaseClump2, 0); tgGood->SetPointError(nptsGood, SumErrBaseClump2, RMSMuck); ++nptsGood;
     //tgGood->AddPoint(SumAveBaseClump3, 0); tgGood->SetPointError(nptsGood, SumErrBaseClump3, RMSMuck); ++nptsGood;
-    
 
+
+    // uniform disk model bessel function fit
     //TF1* BessFit = new TF1("Bess","fabs([0])*pow(2.0*TMath::BesselJ1(TMath::Pi()*x*[1]/(416e-9*2.063e8))/(TMath::Pi()*x*[1]/(416e-9*2.063e8)),2)",0,200);
     TF1* BessFit = new TF1("Bess","fabs([0])*pow(2.0*TMath::BesselJ1(TMath::Pi()*x*[1]*1e-3/(4157e-10*206265))/(TMath::Pi()*x*[1]*1e-3/(4157e-10*206265)),2)",0,200);
     BessFit->SetParName(0,"Normalization"); //g^{2}(0)-1
     BessFit->SetParName(1,"#theta_{UD} (mas)");
     BessFit->SetParameter(0,1e-5); 
     BessFit->SetParameter(1,1);  
-    tgGood->Fit(BessFit, "EX0");
-    tgGood->RemovePoint(nptsGood);
+    //tgGood->Fit(BessFit, "EX0");
+    //tgGood->RemovePoint(nptsGood);
+
+    // limb-darkened model bessel function fit (this is a monster) - jgr added 18 sept 2023
+    // note: here x=baseline, x in paper = (pi*baseline*theta_ud)/wavelength or (pi*x*theta_ud)/lambda
+    TF1* BessFitLD = new TF1("BessLD","fabs([0])*pow(((0.5*TMath::BesselJ1(TMath::Pi()*x*[1]*1e-3/(4157e-10*206265))/(TMath::Pi()*x*[1]*1e-3/(4157e-10*206265))) + ((0.5*sqrt(TMath::Pi()/2.0))*(sqrt(2.0*(4157e-10*206265)/(TMath::Pi()*TMath::Pi()*x*[1]*1e-3))*(((sin(TMath::Pi()*x*[1]*1e-3/(4157e-10*206265))/(TMath::Pi()*x*[1]*1e-3/(4157e-10*206265)))-cos(TMath::Pi()*x*[1]*1e-3/(4157e-10*206265)))/pow(TMath::Pi()*x*[1]*1e-3/(4157e-10*206265),1.5)))))/(5.0/12.0),2)",0,200);
+    BessFitLD->SetParName(0,"Normalization"); //g^{2}(0)-1
+    BessFitLD->SetParName(1,"#theta_{LD} (mas)");
+    BessFitLD->SetParameter(0,1e-5); 
+    BessFitLD->SetParameter(1,1);  
  
     TH1D* UniformDiskModel = new TH1D("myFit","",100,-0.05,200);
     UniformDiskModel->SetMinimum(-4e-6);
@@ -497,10 +506,13 @@ void UniformDiskFit(){
     UniformDiskModel->GetXaxis()->SetTitle("Projected Baseline (m)");
     UniformDiskModel->GetYaxis()->SetTitle("Area Under g^{2}(0)-1 Curve (ns)"); UniformDiskModel->GetYaxis()->SetTitleOffset(1.1); //g^{2}(0)-1
     
-    TGaxis* NormalizedAxis = new TGaxis(200,-4e-6,200,1.5e-5,-4e-6/BessFit->GetParameter(0),1.5e-5/BessFit->GetParameter(0), 510,"+L");
-    NormalizedAxis->SetTitle("Model Dependent Squared Visibilities"); 
-    NormalizedAxis->SetLabelFont(42); NormalizedAxis->SetLabelSize(0.04); NormalizedAxis->SetLabelOffset(0.01);
-    NormalizedAxis->SetTitleFont(42); NormalizedAxis->SetTitleSize(0.04); NormalizedAxis->SetTitleOffset(1.1);
+    
+    //---------------- All Points ------------------
+    // drawing uniform disk model first
+    TCanvas* AllPoints = new TCanvas("All Points","All Points",1200,900);
+    
+    tgGood->Fit(BessFit, "EX0");
+    tgGood->RemovePoint(nptsGood);
     
     TPaveText* r=new TPaveText(0.50,0.7,0.9,0.9,"brNDC");
     r->SetBorderSize(1);
@@ -511,21 +523,57 @@ void UniformDiskFit(){
     r->SetFillColor(kWhite);
     gStyle->SetOptFit(1);
     
+    TGaxis* NormalizedAxis = new TGaxis(200,-4e-6,200,1.5e-5,-4e-6/BessFit->GetParameter(0),1.5e-5/BessFit->GetParameter(0), 510,"+L");
+    NormalizedAxis->SetTitle("Model Dependent Squared Visibilities"); 
+    NormalizedAxis->SetLabelFont(42); NormalizedAxis->SetLabelSize(0.04); NormalizedAxis->SetLabelOffset(0.01);
+    NormalizedAxis->SetTitleFont(42); NormalizedAxis->SetTitleSize(0.04); NormalizedAxis->SetTitleOffset(1.1);
+    
     ofstream out("PointsInVisibityCurve.txt");
     for(int i=0; i < tgGood->GetN(); ++i){out << tgGood->GetPointX(i) << "    " <<  tgGood->GetErrorX(i) << "    " << tgGood->GetPointY(i)  << "   " << tgGood->GetErrorY(i) << "   " << tgGood->GetPointY(i)/BessFit->GetParameter(0) << "   " <<  tgGood->GetErrorY(i)/BessFit->GetParameter(0) << endl;}
-
-    //---------------- All Points ------------------
-    TCanvas* AllPoints = new TCanvas("All Points","All Points",1200,900);
+    out << tgGoodSingle->GetPointX(0) << "  " << tgGoodSingle->GetErrorX(0) << "  " << tgGoodSingle->GetPointY(0) << "  " << tgGoodSingle->GetErrorY(0) << "  " << tgGoodSingle->GetPointY(0)/BessFit->GetParameter(0) << "  " << tgGoodSingle->GetErrorY(0)/BessFit->GetParameter(0) << endl;
+    
     UniformDiskModel->Draw();
     //MuckBounds->Draw("Same");
     //MuckBoundsOutter->Draw("Same");
+    //tgbg->Draw("P,same");
     tgGood->Draw("P, same");
     tgCut->Draw("P, same");
     tgGoodSingle->Draw("P, same");
-    BessFit->Draw("same");
+    //BessFit->Draw("same");
+    BessFit->Draw("SAME");
     r->Draw();
     NormalizedAxis->Draw("same");
     AllPoints->Print("HBTStamps.pdf");
+    
+    // ============= draw limb-darkened curve also ==============================================
+    TCanvas* AllPointsLD = new TCanvas("All Points LD","All Points LD",1200,900);
+    
+    tgGood->AddPoint(SumAveBaseClump1, 0); tgGood->SetPointError(nptsGood, SumAveBaseClump1-SumErrBaseClump1, SumAveBaseClump1-SumErrBaseClump1, RMSMuck, RMSMuck); // add the 100m zero point back in for fit
+    tgGood->Fit(BessFitLD, "EX0");
+    tgGood->RemovePoint(nptsGood);
+    
+    TPaveText* r2=new TPaveText(0.50,0.7,0.9,0.9,"brNDC");
+    r2->SetBorderSize(1);
+    r2->SetTextFont(42); r2->SetTextSize(0.035);
+    r2->AddText(Form("#chi^{2}/ndf   %3.1lf / %d",BessFitLD->GetChisquare(),BessFitLD->GetNDF()));
+    r2->AddText(Form("C_{LD} (ns^{-1})  %3.1le #pm %3.1le",BessFitLD->GetParameter(0), BessFitLD->GetParError(0)));
+    r2->AddText(Form("#theta_{LD} (mas)   %3.2lf #pm %3.2lf",BessFitLD->GetParameter(1), BessFitLD->GetParError(1)));
+    r2->SetFillColor(kWhite);
+    gStyle->SetOptFit(1);
+    
+    TGaxis* NormalizedAxis2 = new TGaxis(200,-4e-6,200,1.5e-5,-4e-6/BessFitLD->GetParameter(0),1.5e-5/BessFitLD->GetParameter(0), 510,"+L");
+    NormalizedAxis2->SetTitle("Model Dependent Squared Visibilities"); 
+    NormalizedAxis2->SetLabelFont(42); NormalizedAxis2->SetLabelSize(0.04); NormalizedAxis2->SetLabelOffset(0.01);
+    NormalizedAxis2->SetTitleFont(42); NormalizedAxis2->SetTitleSize(0.04); NormalizedAxis2->SetTitleOffset(1.1);
+    
+    UniformDiskModel->Draw();
+    tgGood->Draw("PSAME");
+    tgCut->Draw("PSAME");
+    tgGoodSingle->Draw("PSAME");
+    BessFitLD->Draw("SAME");
+    r2->Draw();
+    NormalizedAxis2->Draw("SAME");
+    AllPointsLD->Print("HBTStamps.pdf");
     
     TFile* curveOutFile = new TFile("curve.root","RECREATE");
     UniformDiskModel->Write("UniformDiskModel");
