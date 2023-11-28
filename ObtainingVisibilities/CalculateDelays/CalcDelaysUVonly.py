@@ -104,7 +104,7 @@ while observing_time < end_observing_time:
     sectime = observing_time
     sectime.format = 'cxcsec'
     sectime.out_subfmt = 'decimal'
-    times = np.append(times,sectime.value)
+    times = np.append(times,sectime.value - start_observing_time.value)
     observing_time+=TimeDelta(frameSize,format='sec') # evaluate for each frame!
     frames = np.append(frames, frame)
     frame+=1
@@ -121,9 +121,10 @@ timeString = ttt.value
 for iwhich in range(0,6):
     print("saving file for", pairLabel[iwhich])
     outfile = open('delays/pyinfo'+pairLabel[iwhich]+'.txt','w');
-    outfile.write('frame#   time in run (s)   u coord   v coord   baseline(m)   opd(ns)\n')
+    #outfile.write('frame#   time in run (s)   u coord   v coord   baseline(m)   opd(ns)\n') # printing this line messes up reading in the TNtuple
+	outfile.write('0   0   0   0   0   0\n'); # this seems silly but you MUST do it for the TNtuple not to skip the first row (has to be floats and not strings though?? -- needs more work!)
     for ipt in range(0, times.size): 
-        outfile.write('%d   %f   %f   %f   %f   %f\n' % (frames[ipt], times[ipt], u[iwhich][ipt], v[iwhich][ipt], math.sqrt((u[iwhich][ipt]*u[iwhich][ipt])+(v[iwhich][ipt]*v[iwhich][ipt])), 1.0e9*abs(w[iwhich][ipt])))
+        outfile.write('%d   %f   %f   %f   %f   %f\n' % (frames[ipt], times[ipt], u[iwhich][ipt], v[iwhich][ipt], math.sqrt((u[iwhich][ipt]*u[iwhich][ipt])+(v[iwhich][ipt]*v[iwhich][ipt])), -1.0e9*w[iwhich][ipt]))
     outfile.close()
 
 print("python all done!")
