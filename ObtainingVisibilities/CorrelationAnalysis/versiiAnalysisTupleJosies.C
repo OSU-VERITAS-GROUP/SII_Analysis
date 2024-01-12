@@ -16,10 +16,8 @@ void versiiAnalysisTupleJosies(TString filename){
 
     // get info from the MAIN header first
     TTree* header = new TTree;                    zippedFile->GetObject("Header",header);
-    TString* source = new TString;                  header->SetBranchAddress("SourceBr",&source);         //cout << "star: " << source->Data() <
-< endl;
-    int version, nfiles, numpairs;    header->SetBranchAddress("VersionBr",&version);       //header->SetBranchAddress("NfilesBr",&nfiles);   he
-ader->SetBranchAddress("NpairsBr",&numpairs);
+    TString* source = new TString;                  header->SetBranchAddress("SourceBr",&source);         //cout << "star: " << source->Data() << endl;
+    int version, nfiles, numpairs;    header->SetBranchAddress("VersionBr",&version);       //header->SetBranchAddress("NfilesBr",&nfiles);   header->SetBranchAddress("NpairsBr",&numpairs);
     header->GetEvent(0); // you MUST have this to retrieve correct values from headers
 
   // =================== get necessary info from headers and run python script to calculate delays ========================================
@@ -54,8 +52,7 @@ ader->SetBranchAddress("NpairsBr",&numpairs);
       zippedFile->GetDirectory(keyName)->GetObject("PairHeader",pairhead);
       TProfile2D* cftemp = new TProfile2D;      zippedFile->GetDirectory(keyName)->GetObject(Form("CF%s", keyName.Data()), cftemp);
       if(cftemp->GetYaxis()->GetXmax() > longestRun){ longestRun = cftemp->GetYaxis()->GetXmax(); }
-      if(cftemp->GetYaxis()->GetNbins() > mostFrames){ mostFrames = cftemp->GetYaxis()->GetNbins();  frameWidth = cftemp->GetYaxis()->GetBinWidt
-h(5); }
+      if(cftemp->GetYaxis()->GetNbins() > mostFrames){ mostFrames = cftemp->GetYaxis()->GetNbins();  frameWidth = cftemp->GetYaxis()->GetBinWidth(5); }
       pairhead->SetBranchAddress("LocalTimeBr",&timetemp);   pairhead->GetEvent(0);
       if(timetemp->GetTime() < ltime->GetTime()){ ltime = timetemp; }
     }
@@ -64,16 +61,13 @@ h(5); }
   // store length of longest run, earliest start time (local) as strings to send to python
   length = to_string(longestRun);   //cout << "to str longest run " << to_string(longestRun) << "  longest run " << longestRun << endl;
   loctime = ltime->AsSQLString();   //cout << "ltime num " << ltime << "  ltime string " << loctime << endl;
-  nframes = to_string(mostFrames);  frameSize = to_string(frameWidth);      //cout << "most frames " << nframes << "   width " << frameSize << e
-ndl;
+  nframes = to_string(mostFrames);  frameSize = to_string(frameWidth);      //cout << "most frames " << nframes << "   width " << frameSize << endl;
 
-  cout << "checking python parameters " << length << "  " << nframes << "  " << frameSize << "  " << *(source) << "  " << loctime << endl << end
-l;
+  cout << "checking python parameters " << length << "  " << nframes << "  " << frameSize << "  " << *(source) << "  " << loctime << endl << endl;
 
   // run python script to calculate delays/baselines via bash from within this macro
   cout << "================> Running python script to calculate delays <=====================" << endl;
-  runpy = py + " " + length + " " + nframes + " " + frameSize + " " + *(source) + " " + loctime; // note: source is a pointer so must be derefer
-enced to add to other strings
+  runpy = py + " " + length + " " + nframes + " " + frameSize + " " + *(source) + " " + loctime; // note: source is a pointer so must be dereferenced to add to other strings
   gSystem->Exec(runpy);
   cout << "===============================> Python is done! <================================" << endl;
 
@@ -82,8 +76,7 @@ enced to add to other strings
   // make root file to save objs
   TFile* outfile = new TFile("analysisFull.root","RECREATE");
 
-  // ===================================================== start of the main analysis ==========================================================
-=
+  // ===================================================== start of the main analysis ===========================================================
 
   // loop over each directory we find in the root file (taken from AnalyzeVersiiFiles.C)
   zippedFile->cd();
@@ -109,8 +102,7 @@ enced to add to other strings
           gDirectory->mkdir(Form("%s",keyName.Data()));
           outfile->cd(Form("%s",keyName.Data()));
 
-          TNtuple* geom = GeometryNtuple(keyName, int(mostFrames));  // this will read in all the python-generated files and create a TNtuple ob
-j --- josie replaced NpythonValues w max N frames
+          TNtuple* geom = GeometryNtuple(keyName, int(mostFrames));  // this will read in all the python-generated files and create a TNtuple obj --- josie replaced NpythonValues w max N frames
           geom->Write();
           // note: super simple to draw baselines, etc w TNtuple --> PairGeometryInfo->Draw("v:u")
 
@@ -121,17 +113,13 @@ j --- josie replaced NpythonValues w max N frames
           // get ADCs and normalize correlation function by their product (loop through each frame to normalize)
           TH2D* ADC1 = new TH2D;   zippedFile->GetDirectory("Singles")->GetObject(Form("singlesT%s", tee1.Data()), ADC1);
           TH2D* ADC2 = new TH2D;   zippedFile->GetDirectory("Singles")->GetObject(Form("singlesT%s", tee2.Data()), ADC2);
-          TProfile2D* cfNorm = new TProfile2D("cfNorm","normalized correlation function %s;relative time (ns);time in run (s)",cfOrig->GetXaxis(
-)->GetNbins(),cfOrig->GetXaxis()->GetXmin(),cfOrig->GetXaxis()->GetXmax(),cfOrig->GetYaxis()->GetNbins(),cfOrig->GetYaxis()->GetXmin(),cfOrig->G
-etYaxis()->GetXmax());
+          TProfile2D* cfNorm = new TProfile2D("cfNorm","normalized correlation function %s;relative time (ns);time in run (s)",cfOrig->GetXaxis()->GetNbins(),cfOrig->GetXaxis()->GetXmin(),cfOrig->GetXaxis()->GetXmax(),cfOrig->GetYaxis()->GetNbins(),cfOrig->GetYaxis()->GetXmin(),cfOrig->GetYaxis()->GetXmax());
           for (int iy=1; iy<=cfOrig->GetYaxis()->GetNbins(); iy++){
-            TH1D* adc1y = ADC1->ProjectionX("first ADC proj",iy,iy);     double t1mean = adc1y->GetMean(); // think of how to check for last bin
- overflow and adjust mean!!!!
+            TH1D* adc1y = ADC1->ProjectionX("first ADC proj",iy,iy);     double t1mean = adc1y->GetMean(); // think of how to check for last bin overflow and adjust mean!!!!
             TH1D* adc2y = ADC2->ProjectionX("second ADC proj",iy,iy);    double t2mean = adc2y->GetMean();
 
             for (int ix=1; ix<=cfOrig->GetXaxis()->GetNbins(); ix++){
-              cfNorm->Fill(cfOrig->GetXaxis()->GetBinCenter(ix), cfOrig->GetYaxis()->GetBinCenter(iy), cfOrig->GetBinContent(ix,iy)/(t1mean*t2me
-an));
+              cfNorm->Fill(cfOrig->GetXaxis()->GetBinCenter(ix), cfOrig->GetYaxis()->GetBinCenter(iy), cfOrig->GetBinContent(ix,iy)/(t1mean*t2mean));
             }
             delete adc1y, adc2y;
           }
@@ -180,10 +168,8 @@ an));
             opdGraph->Write("opdgraph");
 
             // make new histogram to hold opd shifted cf and fill by opd shift
-            TProfile2D* cfShift = new TProfile2D("cfShift","OPD shifted correlation function;relative time (ns); time in run (s)", cfNorm->GetXa
-xis()->GetNbins()*4.0, cfNorm->GetXaxis()->GetXmin(),
-                                               cfNorm->GetXaxis()->GetXmax(), cfNorm->GetYaxis()->GetNbins(), cfNorm->GetYaxis()->GetXmin(), cfN
-orm->GetYaxis()->GetXmax());
+            TProfile2D* cfShift = new TProfile2D("cfShift","OPD shifted correlation function;relative time (ns); time in run (s)", cfNorm->GetXaxis()->GetNbins()*4.0, cfNorm->GetXaxis()->GetXmin(),
+                                               cfNorm->GetXaxis()->GetXmax(), cfNorm->GetYaxis()->GetNbins(), cfNorm->GetYaxis()->GetXmin(), cfNorm->GetYaxis()->GetXmax());
             for (int iy=1; iy<=cfNorm->GetYaxis()->GetNbins(); iy++){
               for (int ix=1; ix<=cfNorm->GetXaxis()->GetNbins(); ix++){
                 double xshift = cfNorm->GetXaxis()->GetBinCenter(ix) - opd->GetPointX(iy);
@@ -212,8 +198,7 @@ orm->GetYaxis()->GetXmax());
 
           TF1* hbtfit = new TF1("hbtfit","([0]*exp(-pow((x-[1])/[2],2)/2.0))/([2]*sqrt(2*pi))",-256,256);
           hbtfit->SetParName(0,"area");   hbtfit->SetParameter(0,0.0);
-          hbtfit->SetParName(1,"tau_{0}"); hbtfit->SetParameter(1,reltimePar);  hbtfit->SetParLimits(1,reltimePar-rtWindow, reltimePar+rtWindow)
-;
+          hbtfit->SetParName(1,"tau_{0}"); hbtfit->SetParameter(1,reltimePar);  hbtfit->SetParLimits(1,reltimePar-rtWindow, reltimePar+rtWindow);
           hbtfit->SetParName(2,"#sigma");  hbtfit->SetParameter(2,4.0);  hbtfit->SetParLimits(2,sigmaMin, sigmaMax);
 
           cfFlat->Fit("hbtfit");
@@ -239,8 +224,7 @@ orm->GetYaxis()->GetXmax());
       adc->Write(Form("ADCT%c", keyName.Data()[8]));
     }
     else if((keyName.Data()[0] == 'P') && (className == "TProfile2D")){
-      zippedFile->GetDirectory("Singles")->GetObject(keyName.Data(),powspec);  powspec->SetTitle(Form("power spectrum T%c", keyName.Data()[14]))
-;
+      zippedFile->GetDirectory("Singles")->GetObject(keyName.Data(),powspec);  powspec->SetTitle(Form("power spectrum T%c", keyName.Data()[14]));
       powspec->Write(Form("PowerSpectrumT%c", keyName.Data()[14]));
     }
   }
@@ -250,8 +234,7 @@ orm->GetYaxis()->GetXmax());
 }// end of macro!
 
 
-// ========================================================== FUNCTIONS ========================================================================
-====
+// ========================================================== FUNCTIONS ============================================================================
 
 // FFT function
 
@@ -262,8 +245,7 @@ double DoFFT (TProfile2D * CF, int times){
   double nyquistFrequency_RadiansPerNs = 2.0*TMath::Pi()*(0.5/binsize);
  //double nyquistFrequency_Hertz        = nyquistFrequency_RadianPerSec / (2.0*TMath::Pi());  //to make hertz
 
-  TH2D * FourierTransform = new TH2D(Form("FFT%d", times) , "FFT", nPowerBins, 0.0, nyquistFrequency_RadiansPerNs, CF->GetYaxis()->GetNbins(), C
-F->GetYaxis()->GetXmin(),CF->GetYaxis()->GetXmax());
+  TH2D * FourierTransform = new TH2D(Form("FFT%d", times) , "FFT", nPowerBins, 0.0, nyquistFrequency_RadiansPerNs, CF->GetYaxis()->GetNbins(), CF->GetYaxis()->GetXmin(),CF->GetYaxis()->GetXmax());
 
   for(int TimeSlice = 1; TimeSlice<=CF->GetYaxis()->GetNbins(); TimeSlice++){
     TH1D * CFy = CF->ProjectionX("temp", TimeSlice, TimeSlice);
@@ -284,8 +266,7 @@ F->GetYaxis()->GetXmin(),CF->GetYaxis()->GetXmax());
   return FFTCombine->GetBinCenter(FFTCombine->GetMaximumBin());
 }
 
-// =============================================================================================================================================
-=====
+// ==================================================================================================================================================
 
 // noise removal function
 
@@ -329,8 +310,7 @@ TProfile2D * NoiseRemoveExactFreq(TProfile2D *CF, double FFTFreq, int times){
     PhaseGraph->AddPoint(CF->GetYaxis()->GetBinCenter(TimeSlice), Phi);
 
     for (int ix=1; ix<=CF->GetXaxis()->GetNbins(); ix++){
-      CFMinusNoise->Fill(CF->GetXaxis()->GetBinCenter(ix),CF->GetYaxis()->GetBinCenter(TimeSlice), CF->GetBinContent(ix, TimeSlice) - (height+Am
-p*cos(FFTFreq*CF->GetXaxis()->GetBinCenter(ix)-Phi)));
+      CFMinusNoise->Fill(CF->GetXaxis()->GetBinCenter(ix),CF->GetYaxis()->GetBinCenter(TimeSlice), CF->GetBinContent(ix, TimeSlice) - (height+Amp*cos(FFTFreq*CF->GetXaxis()->GetBinCenter(ix)-Phi)));
     }
   }
 
@@ -378,8 +358,7 @@ TNtuple* GeometryNtuple(TString keyName, int N){
   //1   789646049.184000   -67.690173   -50.053073   84.183744   178.278883
 
   ifstream pyinfoFile;
-  pyinfoFile.open(Form("delays/pyinfo%s.txt", nameBase.Data()));       if (!pyinfoFile.is_open()){cout << "Problem opening python file!!!\n";  r
-eturn 0;}
+  pyinfoFile.open(Form("delays/pyinfo%s.txt", nameBase.Data()));       if (!pyinfoFile.is_open()){cout << "Problem opening python file!!!\n";  return 0;}
   //if (pyinfoFile.is_open()){ cout << "file opened ok! " << nameBase.Data() << endl;}
 
   pyinfoFile >> junk >> junk >> junk >> junk >> junk >> junk;
@@ -395,12 +374,9 @@ eturn 0;}
   // below is the part dr lisa wrote
   /*
   ifstream delayFile, baselineFile, baselineCoordFile;
-  delayFile.open(Form("delays/%s.delay",nameBase.Data()));                   if (!delayFile.is_open()){cout << "Problem opening delay file!!!\n"
-;  return 0;}
-  baselineFile.open(Form("delays/%s.baseline",nameBase.Data()));             if (!baselineFile.is_open()){cout << "Problem opening baseline file
-!!!\n";  return 0;}
-  baselineCoordFile.open(Form("delays/%s.baselinecoord",nameBase.Data()));   if (!baselineCoordFile.is_open()){cout << "Problem opening baseline
- coordinate file!!!\n";  return 0;}
+  delayFile.open(Form("delays/%s.delay",nameBase.Data()));                   if (!delayFile.is_open()){cout << "Problem opening delay file!!!\n";  return 0;}
+  baselineFile.open(Form("delays/%s.baseline",nameBase.Data()));             if (!baselineFile.is_open()){cout << "Problem opening baseline file!!!\n";  return 0;}
+  baselineCoordFile.open(Form("delays/%s.baselinecoord",nameBase.Data()));   if (!baselineCoordFile.is_open()){cout << "Problem opening baseline coordinate file!!!\n";  return 0;}
   for (int i=0; i<N; i++){
     baselineFile      >> vals[0] >> vals[1];                        // time, baseline
     delayFile         >> junk    >> vals[2];                        // OPD
