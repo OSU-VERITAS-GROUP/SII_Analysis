@@ -113,7 +113,7 @@ void versiiAnalysisTupleJosies(TString filename){
        
 	  cfOrig->Write("originalCF");
 
-	  // -------------------------- normalization --------------------------- 
+	  // ----------------------------------------------------------- normalization -------------------------------------------------------------
 	  
 	  // get ADCs and normalize correlation function by their product (loop through each frame to normalize)
 	  TH2D* ADC1 = new TH2D;   zippedFile->GetDirectory("Singles")->GetObject(Form("singlesT%s", tee1.Data()), ADC1);
@@ -129,6 +129,8 @@ void versiiAnalysisTupleJosies(TString filename){
 	    delete adc1y, adc2y;
 	  }
 	  cfNorm->Write("normalizedCF");
+	  
+	  // -------------------------------------------------------------- noise removal -----------------------------------------------------------
 
 	  // rebin for better noise removal
 	  //int rebinby = cfNorm->GetYaxis()->GetNbins()/300; // may need to adjust this more 
@@ -146,6 +148,8 @@ void versiiAnalysisTupleJosies(TString filename){
 	  // draw the heatmap
 	  cfNorm->SetTitle("heatmap;relative time (ns);time in run (s)");
 	  cfNorm->Write("heatmap");
+	  
+	  //--------------------------------------------------------- OPD shift and time average -----------------------------------------------------
 
 	  // read in delays and baselines 
 	  double cableDelays[5]    = {676.8, 676.8, 585.0, 955.0, 1063.7};
@@ -184,10 +188,12 @@ void versiiAnalysisTupleJosies(TString filename){
 	    cfFlat = cfShift->ProfileX("",1,-1);
 	    cfShift->Write("shiftedCF");
 	  }
- 
+	  
 	  cfFlat->SetTitle("projected correlation function;relative time(ns);g^2");
 	  cfFlat->Write("projectedCF");
-
+	  
+	  // ------------------------------------------------------- HBT peak fit -----------------------------------------------------------
+	  
 	  // now fit HBT peak
 	  // define fit parameters
 	  double reltimePar(-5);
@@ -199,6 +205,7 @@ void versiiAnalysisTupleJosies(TString filename){
 	  if((t1==2 && t2==3)){reltimePar =  10;} if((t1==3 && t2==2)){reltimePar = -10;}
 	  if((t1==2 && t2==4)){reltimePar =  18;} if((t1==4 && t2==2)){reltimePar = -18;}
 	  if((t1==3 && t2==4)){reltimePar =  8;}  if((t1==4 && t2==3)){reltimePar = -8;}
+	  //reltimePar = -5;
 	  
 	  TF1* hbtfit = new TF1("hbtfit","([0]*exp(-pow((x-[1])/[2],2)/2.0))/([2]*sqrt(2*pi))",-256,256);
 	  hbtfit->SetParName(0,"area");   hbtfit->SetParameter(0,0.0);
@@ -211,6 +218,8 @@ void versiiAnalysisTupleJosies(TString filename){
   
       }// end of loop over pairs
   }// end of loop over keys
+  
+  // ========================================================== save ADCs and power spectra =============================================================
 
   // now save all ADCs and power spectra to the output file
   outfile->mkdir("Singles");   outfile->cd("Singles");
