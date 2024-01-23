@@ -7,7 +7,7 @@ TNtuple* GeometryNtuple(TString keyName, int N);
 double DoFFT (TProfile2D * CF, int times);
 TProfile2D * NoiseRemoveExactFreq(TProfile2D *CF, double FFTFreq, int times);
 
-void versiiAnalysisTupleJosies(TString filename){//, int off = 1){ // bool doesn't work - let's try an int
+void versiiAnalysisOff(TString filename){//, int off = 1){ // bool doesn't work - let's try an int
 int off = 1; // idk man
     
     // opening input "zipped frames" root file
@@ -115,6 +115,10 @@ int off = 1; // idk man
           
           // ------------------------------------------------------------- off data ---------------------------------------------------------------
           
+          // off ADCs before and after run for both telescopes, and increments for change in ADC 
+          double beforeADC1(0.0), afterADC1(0.0), beforeADC2(0.0), afterADC2(0.0); 
+          double dOffadc1, dOffadc2;
+          
           if (off == 1){
               
               // get start and end times of run and convert to UTC time
@@ -130,9 +134,8 @@ int off = 1; // idk man
               // variables to hold off data info while looping to match correct off runs
               TTree* offbranch1 = new TTree;        zippedFile->GetObject(Form("OFF/OffDataT%s", tee1.Data()), offbranch1);  // get branches for both telescopes in pair
               TTree* offbranch2 = new TTree;        zippedFile->GetObject(Form("OFF/OffDataT%s", tee2.Data()), offbranch2);
-              TDatime* tempofftime1 = new TDatime;      TDatime* tempofftime2 = new TDatime; // temps to hold each off run in loop, before and after to hold times closest to start/end 
-              double beforeADC1, afterADC1, beforeADC2, afterADC2; // off ADCs before and after run for each telescope
-              
+              TDatime* tempofftime1 = new TDatime;      TDatime* tempofftime2 = new TDatime; // temps to hold each off run in loop, before and after to hold times closest to start/end
+            
               // initialize before and after times to long/before after run - must initialize with a value so comparison works
               TDatime* beforeRun1 = new TDatime;    beforeRun1->Set(timeStart->GetYear(), timeStart->GetMonth(), timeStart->GetDay(), timeStart->GetHour() - 1.0, timeStart->GetMinute(), timeStart->GetSecond());
               TDatime* afterRun1 = new TDatime;     afterRun1->Set(timeStart->GetYear(), timeStart->GetMonth(), timeStart->GetDay(), timeStart->GetHour() + 5.0, timeStart->GetMinute(), timeStart->GetSecond());
@@ -169,6 +172,10 @@ int off = 1; // idk man
               // check - put out a warning if the start or end times are more than 5 mins different
               if(abs(int(beforeRun1->Convert()) - int(beforeRun2->Convert())) > 300){ cout << endl << "big discrepancy between telescopes in off runs before! check for missing files" << endl; } // must explicitly type ints or abs() gets confused
               if(abs(int(afterRun1->Convert()) - int(afterRun2->Convert())) > 300){ cout << endl << "big discrepancy between telescopes in off runs after! check for missing files" << endl; }
+              
+              // get avg change in ADC over run for subtraction
+              dOffadc1 = (afterRun1 - beforeRun1)/double(cfOrig->GetYaxis()->GetNbins());
+              dOffadc2 = (afterRun2 - beforeRun2)/double(cfOrig->GetYaxis()->GetNbins());
           }
 
 	  // ----------------------------------------------------------- normalization -------------------------------------------------------------
@@ -177,14 +184,30 @@ int off = 1; // idk man
 	  TH2D* ADC1 = new TH2D;   zippedFile->GetDirectory("Singles")->GetObject(Form("singlesT%s", tee1.Data()), ADC1);
 	  TH2D* ADC2 = new TH2D;   zippedFile->GetDirectory("Singles")->GetObject(Form("singlesT%s", tee2.Data()), ADC2);
 	  TProfile2D* cfNorm = new TProfile2D("cfNorm","normalized correlation function %s;relative time (ns);time in run (s)",cfOrig->GetXaxis()->GetNbins(),cfOrig->GetXaxis()->GetXmin(),cfOrig->GetXaxis()->GetXmax(),cfOrig->GetYaxis()->GetNbins(),cfOrig->GetYaxis()->GetXmin(),cfOrig->GetYaxis()->GetXmax());
-	  for (int iy=1; iy<=cfOrig->GetYaxis()->GetNbins(); iy++){
-	    TH1D* adc1y = ADC1->ProjectionX("first ADC proj",iy,iy);     double t1mean = adc1y->GetMean(); // think of how to check for last bin overflow and adjust mean!!!!
-	    TH1D* adc2y = ADC2->ProjectionX("second ADC proj",iy,iy);    double t2mean = adc2y->GetMean();
-
-	    for (int ix=1; ix<=cfOrig->GetXaxis()->GetNbins(); ix++){
-              cfNorm->Fill(cfOrig->GetXaxis()->GetBinCenter(ix), cfOrig->GetYaxis()->GetBinCenter(iy), cfOrig->GetBinContent(ix,iy)/(t1mean*t2mean));
-	    }
-	    delete adc1y, adc2y;
+	  
+	  // divide correlation function by product of ADCs at each frame
+	  if(off == 0){
+	      for (int iy=1; iy<=cfOrig->GetYaxis()->GetNbins(); iy++){
+	          TH1D* adc1y = ADC1->ProjectionX("first ADC proj",iy,iy);     double t1mean = adc1y->GetMean(); // think of how to check for last bin overflow and adjust mean!!!!
+	          TH1D* adc2y = ADC2->ProjectionX("second ADC proj",iy,iy);    double t2mean = adc2y->GetMean();
+	          for (int ix=1; ix<=cfOrig->GetXaxis()->GetNbins(); ix++){
+	              cfNorm->Fill(cfOrig->GetXaxis()->GetBinCenter(ix), cfOrig->GetYaxis()->GetBinCenter(iy), cfOrig->GetBinContent(ix,iy)/(t1mean*t2mean));
+	          }
+	          delete adc1y, adc2y;
+	      }
+	  }
+	  // for off data, divide by product of ADCs with off subtraction at each frame
+	  else if(off == 1){ 
+	      double offadc1 = beforeADC1;    double offadc2 = beforeADC2;
+	      for (int iy=1; iy<=cfOrig->GetYaxis()->GetNbins(); iy++){
+	          TH1D* adc1y = ADC1->ProjectionX("first ADC proj",iy,iy);     double t1mean = adc1y->GetMean();
+	          TH1D* adc2y = ADC2->ProjectionX("second ADC proj",iy,iy);    double t2mean = adc2y->GetMean();
+	          for (int ix=1; ix<=cfOrig->GetXaxis()->GetNbins(); ix++){
+	              cfNorm->Fill(cfOrig->GetXaxis()->GetBinCenter(ix), cfOrig->GetYaxis()->GetBinCenter(iy), (cfOrig->GetBinContent(ix,iy) - (t1mean*offadc2) - (t2mean*offadc1) + (offadc1*offadc2))/((t1mean-offadc1)*(t2mean-offadc2)));
+	          }
+	          offadc1 += dOffadc1;   offadc2 += dOffadc2;
+	          delete adc1y, adc2y;
+	      }
 	  }
 	  cfNorm->Write("normalizedCF");
 	  
