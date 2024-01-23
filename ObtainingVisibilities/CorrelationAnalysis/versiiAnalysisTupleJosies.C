@@ -7,7 +7,7 @@ TNtuple* GeometryNtuple(TString keyName, int N);
 double DoFFT (TProfile2D * CF, int times);
 TProfile2D * NoiseRemoveExactFreq(TProfile2D *CF, double FFTFreq, int times);
 
-void versiiAnalysisOff(TString filename){//, int off = 1){ // bool doesn't work - let's try an int
+void versiiAnalysisTupleJosies(TString filename){//, int off = 1){ // bool doesn't work - let's try an int
 int off = 1; // idk man
     
     // opening input "zipped frames" root file
