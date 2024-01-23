@@ -1,14 +1,14 @@
 // josie 13 nov 2023
 // new full analysis script, processes as many telescope pairs as are in the file from versii, only takes version -4 for now
 // with edits from dr lisa to add TNtuple, and josie edits to read in correct uvw info since i fixed the python
-
-// need to add subtracting off data!!!
+// 21 jan 2024 adding off data -- NOTE: takes a SECOND input, T/F off data
 
 TNtuple* GeometryNtuple(TString keyName, int N);
 double DoFFT (TProfile2D * CF, int times);
 TProfile2D * NoiseRemoveExactFreq(TProfile2D *CF, double FFTFreq, int times);
 
-void versiiAnalysisTupleJosies(TString filename){
+void versiiAnalysisTupleJosies(TString filename){//, int off = 1){ // bool doesn't work - let's try an int
+int off = 1; // idk man
     
     // opening input "zipped frames" root file
     TFile* zippedFile = new TFile(filename.Data(),"READONLY");
@@ -94,24 +94,82 @@ void versiiAnalysisTupleJosies(TString filename){
           cout << "now starting pair " << keyName.Data() << endl;
           TString tee1 = keyName[1];    int t1 = atoi(tee1.Data()); 
           TString tee2 = keyName[3];    int t2 = atoi(tee2.Data());
-
-	  // get pair header tree, for now all we need is the correlation delay (num buckets offset) but can print the rest as a check
+          
+          // get pair header tree, for now all we need is the correlation delay (num buckets offset) but can print the rest as a check
           TTree* pairhead = new TTree;
           zippedFile->GetDirectory(keyName)->GetObject("PairHeader",pairhead);
-	  int nbo;   pairhead->SetBranchAddress("corrDelayBr",&nbo);   pairhead->GetEvent(0);
-	  
-	  // get original correlation function and draw
+          int nbo;   pairhead->SetBranchAddress("corrDelayBr",&nbo);   pairhead->GetEvent(0);
+          
+          // get original correlation function and draw
           TProfile2D* cfOrig = new TProfile2D;      zippedFile->GetDirectory(keyName)->GetObject(Form("CF%s", keyName.Data()), cfOrig);
-	  cfOrig->SetTitle(Form("raw correlation function %s;relative time (ns); frames (s)", keyName.Data()));
-	  outfile->cd();
-	  gDirectory->mkdir(Form("%s",keyName.Data()));
-	  outfile->cd(Form("%s",keyName.Data()));
-
-	  TNtuple* geom = GeometryNtuple(keyName, int(mostFrames));  // this will read in all the python-generated files and create a TNtuple obj --- josie replaced NpythonValues w max N frames
-	  geom->Write();
-	  // note: super simple to draw baselines, etc w TNtuple --> PairGeometryInfo->Draw("v:u")
-       
-	  cfOrig->Write("originalCF");
+          cfOrig->SetTitle(Form("raw correlation function %s;relative time (ns); frames (s)", keyName.Data()));
+          outfile->cd();
+          gDirectory->mkdir(Form("%s",keyName.Data()));
+          outfile->cd(Form("%s",keyName.Data()));
+          
+          // get info from python-generated text files and create TNtuple -- note: super simple to draw baselines, etc w TNtuple --> PairGeometryInfo->Draw("v:u")
+          TNtuple* geom = GeometryNtuple(keyName, int(mostFrames));
+          geom->Write();
+          
+          cfOrig->Write("originalCF");
+          
+          // ------------------------------------------------------------- off data ---------------------------------------------------------------
+          
+          if (off == 1){
+              
+              // get start and end times of run and convert to UTC time
+              TDatime* timeStart = new TDatime;    TDatime* timeEnd = new TDatime;
+              //int timeStartConv, timeEndConv;
+              int runlength = int(cfOrig->GetYaxis()->GetXmax());
+              pairhead->SetBranchAddress("LocalTimeBr",&timeStart);    pairhead->GetEvent(0);
+              timeEnd->Set(timeStart->GetYear(), timeStart->GetMonth(), timeStart->GetDay(), timeStart->GetHour() + (runlength/3600), timeStart->GetMinute() + (runlength%3600/60), timeStart->GetSecond() + (runlength%3600%60));
+              cout << "start time: " << timeStart->AsSQLString() << "    end time: " << timeEnd->AsSQLString() << "   length: " << runlength << endl;
+              //timeStartConv = timeStart->Convert(); 
+              //timeEndConv = timeEnd->Convert(); //timeStartConv + runlength;
+              
+              // variables to hold off data info while looping to match correct off runs
+              TTree* offbranch1 = new TTree;        zippedFile->GetObject(Form("OFF/OffDataT%s", tee1.Data()), offbranch1);  // get branches for both telescopes in pair
+              TTree* offbranch2 = new TTree;        zippedFile->GetObject(Form("OFF/OffDataT%s", tee2.Data()), offbranch2);
+              TDatime* tempofftime1 = new TDatime;      TDatime* tempofftime2 = new TDatime; // temps to hold each off run in loop, before and after to hold times closest to start/end 
+              double beforeADC1, afterADC1, beforeADC2, afterADC2; // off ADCs before and after run for each telescope
+              
+              // initialize before and after times to long/before after run - must initialize with a value so comparison works
+              TDatime* beforeRun1 = new TDatime;    beforeRun1->Set(timeStart->GetYear(), timeStart->GetMonth(), timeStart->GetDay(), timeStart->GetHour() - 1.0, timeStart->GetMinute(), timeStart->GetSecond());
+              TDatime* afterRun1 = new TDatime;     afterRun1->Set(timeStart->GetYear(), timeStart->GetMonth(), timeStart->GetDay(), timeStart->GetHour() + 5.0, timeStart->GetMinute(), timeStart->GetSecond());
+              TDatime* beforeRun2 = new TDatime;    beforeRun2->Set(timeStart->GetYear(), timeStart->GetMonth(), timeStart->GetDay(), timeStart->GetHour() - 1.0, timeStart->GetMinute(), timeStart->GetSecond());
+              TDatime* afterRun2 = new TDatime;     afterRun2->Set(timeStart->GetYear(), timeStart->GetMonth(), timeStart->GetDay(), timeStart->GetHour() + 5.0, timeStart->GetMinute(), timeStart->GetSecond());
+              
+              // loop through off run times to find closest off runs before start and after end of run - must check both telescopes bc they may not have same number of off runs
+              for (int io=0; io<offbranch1->GetEntries(); io++){
+                  offbranch1->SetBranchAddress("LocalTimBr",&tempofftime1);  offbranch1->GetEvent(io); // yes it should be LocalTim, typo in root file
+                  if((tempofftime1->Convert() < timeStart->Convert()) && (timeStart->Convert() - tempofftime1->Convert() < timeStart->Convert() - beforeRun1->Convert())){ 
+                      beforeRun1->Set(tempofftime1->GetYear(), tempofftime1->GetMonth(), tempofftime1->GetDay(), tempofftime1->GetHour(), tempofftime1->GetMinute(), tempofftime1->GetSecond());
+                      offbranch1->SetBranchAddress("AveAdcBr",&beforeADC1);     offbranch1->GetEvent(io);
+                  }
+                  if((tempofftime1->Convert() > timeEnd->Convert()) && (tempofftime1->Convert() - timeEnd->Convert() < afterRun1->Convert() - timeEnd->Convert())){ 
+                      afterRun1->Set(tempofftime1->GetYear(), tempofftime1->GetMonth(), tempofftime1->GetDay(), tempofftime1->GetHour(), tempofftime1->GetMinute(), tempofftime1->GetSecond());
+                      offbranch1->SetBranchAddress("AveAdcBr",&afterADC1);      offbranch1->GetEvent(io);
+                  }
+              }
+              // and repeat for the second telescope - just in case one would cut out at the beginning/end of the night
+              for (int io=0; io<offbranch2->GetEntries(); io++){
+                  offbranch2->SetBranchAddress("LocalTimBr",&tempofftime2);  offbranch2->GetEvent(io); // yes it should be LocalTim, typo in root file
+                  if((tempofftime2->Convert() < timeStart->Convert()) && (timeStart->Convert() - tempofftime2->Convert() < timeStart->Convert() - beforeRun2->Convert())){ 
+                      beforeRun2->Set(tempofftime2->GetYear(), tempofftime2->GetMonth(), tempofftime2->GetDay(), tempofftime2->GetHour(), tempofftime2->GetMinute(), tempofftime2->GetSecond());
+                      offbranch2->SetBranchAddress("AveAdcBr",&beforeADC2);     offbranch2->GetEvent(io);
+                  }
+                  if((tempofftime2->Convert() > timeEnd->Convert()) && (tempofftime2->Convert() - timeEnd->Convert() < afterRun2->Convert() - timeEnd->Convert())){ 
+                      afterRun2->Set(tempofftime2->GetYear(), tempofftime2->GetMonth(), tempofftime2->GetDay(), tempofftime2->GetHour(), tempofftime2->GetMinute(), tempofftime2->GetSecond());
+                      offbranch2->SetBranchAddress("AveAdcBr",&afterADC2);      offbranch2->GetEvent(io);
+                  }
+              }
+              cout << "check off times   before: " << beforeRun1->AsSQLString() << "   after: " << afterRun1->AsSQLString() << "    2nd tel    before: " << beforeRun2->AsSQLString() << "   after: " << afterRun2->AsSQLString() << endl;
+              cout << "ADCs    before: " << beforeADC1 << "   after: " << afterADC1 << "     2nd tel    before: " << beforeADC2 << "   after: " << afterADC2 << endl;
+              
+              // check - put out a warning if the start or end times are more than 5 mins different
+              if(abs(int(beforeRun1->Convert()) - int(beforeRun2->Convert())) > 300){ cout << endl << "big discrepancy between telescopes in off runs before! check for missing files" << endl; } // must explicitly type ints or abs() gets confused
+              if(abs(int(afterRun1->Convert()) - int(afterRun2->Convert())) > 300){ cout << endl << "big discrepancy between telescopes in off runs after! check for missing files" << endl; }
+          }
 
 	  // ----------------------------------------------------------- normalization -------------------------------------------------------------
 	  
@@ -133,9 +191,7 @@ void versiiAnalysisTupleJosies(TString filename){
 	  // -------------------------------------------------------------- noise removal -----------------------------------------------------------
 
 	  // rebin for better noise removal
-	  //int rebinby = cfNorm->GetYaxis()->GetNbins()/300; // may need to adjust this more 
-	  //cfNorm->RebinY(rebinby);
-	  cfNorm->RebinY(16);
+	  cfNorm->RebinY(16); // ~2s frames -> ~32s frames
 
 	  // FFTs and noise removal
 	  cfNorm->Draw("COLZ");
@@ -199,20 +255,28 @@ void versiiAnalysisTupleJosies(TString filename){
 	  double reltimePar(-5);
 	  double rtWindow(10.0); // HALF width of search window for hbt peak
 	  double sigmaMin(2.5), sigmaMax(5.5); // ns, min and max width of hbt peak
-	  if((t1==1 && t2==2)){reltimePar = -20;} if((t1==2 && t2==1)){reltimePar =  20;} // need to adjust these??
+	  //if((t1==1 && t2==2)){reltimePar = -20;} if((t1==2 && t2==1)){reltimePar =  20;} // need to adjust these??
+	  //if((t1==1 && t2==3)){reltimePar = -10;} if((t1==3 && t2==1)){reltimePar =  10;}
+	  //if((t1==1 && t2==4)){reltimePar =  2;}  if((t1==4 && t2==1)){reltimePar = -2;}
+	  //if((t1==2 && t2==3)){reltimePar =  10;} if((t1==3 && t2==2)){reltimePar = -10;}
+	  //if((t1==2 && t2==4)){reltimePar =  18;} if((t1==4 && t2==2)){reltimePar = -18;}
+	  //if((t1==3 && t2==4)){reltimePar =  8;}  if((t1==4 && t2==3)){reltimePar = -8;}
+	  if((t1==1 && t2==2)){reltimePar = -5;} if((t1==2 && t2==1)){reltimePar =  20;} // need to adjust these??
 	  if((t1==1 && t2==3)){reltimePar = -10;} if((t1==3 && t2==1)){reltimePar =  10;}
 	  if((t1==1 && t2==4)){reltimePar =  2;}  if((t1==4 && t2==1)){reltimePar = -2;}
 	  if((t1==2 && t2==3)){reltimePar =  10;} if((t1==3 && t2==2)){reltimePar = -10;}
 	  if((t1==2 && t2==4)){reltimePar =  18;} if((t1==4 && t2==2)){reltimePar = -18;}
 	  if((t1==3 && t2==4)){reltimePar =  8;}  if((t1==4 && t2==3)){reltimePar = -8;}
-	  //reltimePar = -5;
 	  
 	  TF1* hbtfit = new TF1("hbtfit","([0]*exp(-pow((x-[1])/[2],2)/2.0))/([2]*sqrt(2*pi))",-256,256);
 	  hbtfit->SetParName(0,"area");   hbtfit->SetParameter(0,0.0);
-	  hbtfit->SetParName(1,"tau_{0}"); hbtfit->SetParameter(1,reltimePar);  hbtfit->SetParLimits(1,reltimePar-rtWindow, reltimePar+rtWindow);
+	  hbtfit->SetParName(1,"#tau_{0}"); hbtfit->SetParameter(1,reltimePar);  hbtfit->SetParLimits(1,reltimePar-rtWindow, reltimePar+rtWindow);
 	  hbtfit->SetParName(2,"#sigma");  hbtfit->SetParameter(2,4.0);  hbtfit->SetParLimits(2,sigmaMin, sigmaMax);
-
+	  
+	  gStyle->SetOptStat(0);  gStyle->SetOptFit(1);
 	  cfFlat->Fit("hbtfit");
+	  gPad->Update(); gPad->Modified(); // get fit results to show up in stats box
+	  cout << t1 << t2 << "   area: " << hbtfit->GetParameter(0) << "   tau: " << hbtfit->GetParameter(1) << "   sigma: " << hbtfit->GetParameter(2) << endl;
 	  cfFlat->Write("fittedCF");
 	  outfile->cd();
   
