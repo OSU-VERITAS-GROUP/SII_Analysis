@@ -79,8 +79,10 @@ int off = 1; // idk man
   TCanvas* c1 = new TCanvas;
 
   // make root file to save objs
-  TFile* outfile = new TFile("analysisFull.root","RECREATE");
-
+  TString outName = filename.ReplaceAll("ZippedFrames","analysis");
+  TFile* outfile = new TFile(Form("%s",outName.Data()),"RECREATE");
+  cout << "saving everything to root file named: " << outName.Data() << endl;
+  
   // ===================================================== start of the main analysis ===========================================================
   
   // loop over each directory we find in the root file (taken from AnalyzeVersiiFiles.C)
