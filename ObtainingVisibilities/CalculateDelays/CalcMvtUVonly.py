@@ -120,7 +120,7 @@ timeString = ttt.value
 # single new output file replaces all the old ones, but we still have one file per telescope pair
 for iwhich in range(0,6):
     print("saving file for", pairLabel[iwhich])
-    outfile = open('delays/pyinfo'+pairLabel[iwhich]+'.txt','w');
+    outfile = open('pyinfo'+pairLabel[iwhich]+'.txt','w');
     #outfile.write('frame#   time in run (s)   u coord   v coord   baseline(m)   opd(ns)\n') # printing this line messes up reading in the TNtuple
 	outfile.write('0   0   0   0   0   0\n'); # this seems silly but you MUST do it for the TNtuple not to skip the first row (has to be floats and not strings though?? -- needs more work!)
     for ipt in range(0, times.size): 
