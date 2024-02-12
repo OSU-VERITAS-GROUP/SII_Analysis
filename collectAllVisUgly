@@ -1,0 +1,403 @@
+// josie jan 29 2024
+// temporary "ugly" simpler version of uniform disk fit for new versii data only (combine w old data) -- do splits, fit all peaks, analysis cuts, and combine on visibility curve -- JUST for gam cas for now
+
+void collectAllVisUgly(){
+    
+    // in the nice future version there will be the subroutine to tell how many and what runs and which directories they live in - I am hard coding it
+    const int nfiles(9);
+    TString filename[nfiles] = {
+        "2023DecDataVersii/gam cas_y2023m12d24h18m57s53_analysis.root",
+        "2023DecDataVersii/gam cas_y2023m12d24h20m04s42_analysis.root",
+        "2023DecDataVersii/gam cas_y2023m12d25h18m34s13_analysis.root",
+        "2023DecDataVersii/gam cas_y2023m12d25h20m37s12_analysis.root",
+        "2023DecDataVersii/gam cas_y2023m12d25h22m38s38_analysis.root",
+        "2023DecDataVersii/gam cas_y2023m12d26h00m39s31_analysis.root",
+        "2023DecDataVersii/gam Cas_y2023m12d26h18m43s56_analysis.root",
+        "2023DecDataVersii/gam Cas_y2023m12d26h20m44s43_analysis.root",
+        "2023DecDataVersii/gam Cas_y2023m12d26h22m47s50_analysis.root"};
+        //"2023DataVersii/gam cas_y2023m01d07h22m23s24_analysis.root", // these are version -3!!! need analysis fixed
+        //"2023DataVersii/gam Cas_y2023m02d01h20m10s16_analysis.root",
+        //"2023DataVersii/gam Cas_y2023m02d01h22m12s31_analysis.root"
+        //"StellarAnalysis/gamCas/VersiiCorrelations/gam cas_y2023m01d07h22m23s24_analysis.root", // temporarily in other directory until i have permissions on osc
+        //"StellarAnalysis/gamCas/VersiiCorrelations/gam Cas_y2023m02d01h20m10s16_analysis.root",
+        //"StellarAnalysis/gamCas/VersiiCorrelations/gam Cas_y2023m02d01h22m12s31_analysis.root"};
+    
+    gStyle->SetOptStat(0);
+    gStyle->SetOptFit(1);
+    
+    TCanvas* cvis = new TCanvas;
+    TGraphErrors* allpts = new TGraphErrors();      allpts->SetMarkerStyle(20);     allpts->SetTitle("visibility curve;baseline (m);g^2(#tau)-1");
+    TGraphErrors* viscurve1 = new TGraphErrors();   viscurve1->SetMarkerStyle(20);  //viscurve1->SetMarkerColor(
+    TGraphErrors* viscurve2 = new TGraphErrors();   viscurve2->SetMarkerStyle(20);  viscurve2->SetMarkerColor(2);
+    TGraphErrors* viscurve3 = new TGraphErrors();   viscurve3->SetMarkerStyle(20);  viscurve3->SetMarkerColor(3);
+    TGraphErrors* viscurve4 = new TGraphErrors();   viscurve4->SetMarkerStyle(20);  viscurve4->SetMarkerColor(4);   
+    TGraph* axes = new TGraph();    axes->SetMarkerStyle(9);    axes->SetMarkerColor(0);
+    axes->AddPoint(0,-2e-6);    axes->AddPoint(180,15e-6);
+    int npts(0), npts1(0), npts2(0), npts3(0), npts4(0);
+    cvis->Print("viscurve.pdf[");
+    
+    TCanvas* cpeaks = new TCanvas;  
+    cpeaks->Divide(4,3);    cpeaks->cd(1);
+    cpeaks->Print("allPeaksUgly.pdf[");
+    int ncpeaks(1);
+    
+    TCanvas* cvis2D = new TCanvas();
+    TGraph2DErrors* viscurve2D = new TGraph2DErrors();      viscurve2D->SetMarkerStyle(20);
+    viscurve2D->SetTitle("visibility curve w uv;u;v;g^2(#tau)-1");
+    
+    TCanvas* cuvClumps = new TCanvas("","",1200,400);
+    cuvClumps->Divide(4,2);
+    TGraphErrors* uv55m = new TGraphErrors();   uv55m->SetMarkerStyle(20);      uv55m->SetTitle("baseline 50-60m;uv angle from E;visibility");
+    TGraphErrors* uv65m = new TGraphErrors();   uv65m->SetMarkerStyle(20);      uv65m->SetTitle("baseline 60-68m;uv angle from E;visibility");
+    TGraphErrors* uv75m = new TGraphErrors();   uv75m->SetMarkerStyle(20);      uv75m->SetTitle("baseline 68-78m;uv angle from E; visibility");
+    TGraphErrors* uv80m = new TGraphErrors();   uv80m->SetMarkerStyle(20);      uv80m->SetTitle("baseline 78-83m;uv angle from E;visibility");
+    TGraphErrors* uv85m = new TGraphErrors();   uv85m->SetMarkerStyle(20);      uv85m->SetTitle("baseline 83-88m;uv angle from E;visibility");
+    TGraphErrors* uv90m = new TGraphErrors();   uv90m->SetMarkerStyle(20);      uv90m->SetTitle("baseline 88-95m;uv angle from E;visibility");
+    TGraphErrors* uv100m = new TGraphErrors();  uv100m->SetMarkerStyle(20);     uv100m->SetTitle("baseline 95-103m;uv angle from E;visibility");
+    TGraphErrors* uv110m = new TGraphErrors();  uv110m->SetMarkerStyle(20);     uv110m->SetTitle("baseline 103m+;uv angle from E; visibility");
+    TGraph* uvaxes = new TGraph();  uvaxes->SetMarkerStyle(9);  uvaxes->SetMarkerColor(0);  uvaxes->SetTitle("visibility by uv angle;uv angle from E;visibility");
+    int npts55m(0), npts65m(0), npts75m(0), npts80m(0), npts85m(0), npts90m(0), npts100m(0), npts110m(0);
+    cuvClumps->Print("uvClumps.pdf[");
+    
+    TCanvas* cdist = new TCanvas;
+    cdist->Divide(3,2);
+    TH1D* tau12 = new TH1D("tau12","T1T2",24,-20,4);
+    TH1D* tau13 = new TH1D("tau13","T1T3",24,-12,12);
+    TH1D* tau14 = new TH1D("tau14","T1T4",24,-10,14);
+    TH1D* tau23 = new TH1D("tau23","T2T3",24,-3,21);
+    TH1D* tau24 = new TH1D("tau24","T2T4",24,-3,21);
+    TH1D* tau34 = new TH1D("tau34","T3T4",24,-14,10);
+    TH1D* basedist = new TH1D("basedist","baselines;baseline;counts",45,0,180);
+    TH1D* angledist = new TH1D("angledist","uv angles;angle from cel E;counts",20,-TMath::Pi()/2.0, TMath::Pi()/2.0);
+    cdist->Print("dists.pdf[");
+    
+    TCanvas* cuvplot = new TCanvas("","",1000,900);
+    TGraph* uvallaxes = new TGraph();   uvallaxes->SetMarkerStyle(9);   uvallaxes->SetMarkerColor(0);   uvallaxes->SetTitle("uv coverage;u#lambda (m);v#lambda (m)");
+    uvallaxes->AddPoint(-120,-120);     uvallaxes->AddPoint(120,120);
+    
+    
+    ofstream angles;   angles.open("angles.txt");
+    
+    // loop over all known root files
+    for (int i=0; i<nfiles; i++){
+        
+        cout << endl << "starting file " << filename[i] << endl;
+        
+        // open analysis data file
+        TFile* analysisfile = new TFile("/fs/ess/PAS1977/"+filename[i],"READONLY");
+        int split(1);
+        
+        // trim file string to just time of run for plot titles
+        string namedate = filename[i].Data();
+        namedate = namedate.substr(namedate.find("_y")+2, namedate.length()); // when I get edit permissions in other dir, can change to "/" char
+        namedate = namedate.substr(0, namedate.find("_")); // for some reason, cannot combine these into one line - must trim front and back separately
+        
+        // loop over each tdirectory in root file to find each pair
+        TList* keyList = gDirectory->GetListOfKeys();
+        for (int ip=0; ip<keyList->GetSize(); ip++){
+            TKey* key = (TKey*)keyList->At(ip);
+            TString keyName = key->GetName();
+            TString className = key->GetClassName();
+            if ((keyName.Data()[0]=='T')&&(className=="TDirectoryFile")){
+                TString tee1 = keyName[1];    int t1 = atoi(tee1.Data()); 
+                TString tee2 = keyName[3];    int t2 = atoi(tee2.Data());
+                split = 1;
+                
+                TTree* pairhead = new TTree; // maybe not necessary ...
+                analysisfile->GetDirectory(keyName)->GetObject("pairheader",pairhead);
+                
+                TProfile2D* cf2D = new TProfile2D;      analysisfile->GetDirectory(keyName)->GetObject("shiftedCF", cf2D);
+                double runlength;   runlength = cf2D->GetYaxis()->GetNbins()*cf2D->GetYaxis()->GetBinWidth(5);
+                
+                TH2D* adc12D = new TH2D;      analysisfile->GetDirectory("Singles")->GetObject(Form("ADCT%s",tee1.Data()), adc12D);     adc12D->RebinY(16);
+                TH2D* adc22D = new TH2D;      analysisfile->GetDirectory("Singles")->GetObject(Form("ADCT%s",tee2.Data()), adc22D);     adc22D->RebinY(16);
+                
+                TNtuple* geometry = new TNtuple;        analysisfile->GetDirectory(keyName)->GetObject("PairGeometryInfo",geometry);
+                geometry->Draw("baseline:time");
+                TGraph* fullbaseline = new TGraph(geometry->GetSelectedRows(), geometry->GetV1(), geometry->GetV2());
+                cout << keyName << "   mean baseline " << fullbaseline->GetMean() << endl;
+                geometry->Draw("v:u");
+                TGraph* uv = new TGraph(geometry->GetSelectedRows(), geometry->GetV1(), geometry->GetV2());
+                //if(t1 == 1 && t2 == 2){ uv->SetMarkerColor(2);}
+                //if()
+                //cuvplot->cd();  uv->SetMarkerStyle(20);     
+                geometry->Draw("baseline:u");
+                TGraph* uEval = new TGraph(geometry->GetSelectedRows(), geometry->GetV1(), geometry->GetV2());
+                geometry->Draw("baseline:v");
+                TGraph* vEval = new TGraph(geometry->GetSelectedRows(), geometry->GetV1(), geometry->GetV2());
+                
+                // split run in half (or more later) if longer than 1 hr and short baseline
+                if(runlength > 3600 && fullbaseline->GetMean() < 100){ split = 2; } // subject to change baseline - but I think it's justified NOT to split when we have long baselines
+                int startbin(1);
+                int endbin = cf2D->GetYaxis()->GetNbins()/split;
+                
+                // loop over number of splits
+                for (int is=0; is<split; is++){
+                    
+                    // project to get HBT peak
+                    TProfile* cfProj = new TProfile;
+                    cfProj = cf2D->ProfileX("",startbin, endbin);
+                    int flag(0);
+                    
+                    // calc fit parameters
+                    double rtWindow(12.0);
+                    double sigmaMin(2.0), sigmaMax(7.0);
+                    double reltimePar(-5);
+                    if((t1==1 && t2==2)){reltimePar = -8;}  // need to adjust these!
+                    if((t1==1 && t2==3)){reltimePar = 0;} 
+                    if((t1==1 && t2==4)){reltimePar =  2;}  
+                    if((t1==2 && t2==3)){reltimePar =  9;} //10
+                    if((t1==2 && t2==4)){reltimePar =  9;} //5
+                    if((t1==3 && t2==4)){reltimePar =  -2;} 
+                    
+                    // fit function -- later acct for tugdual's thing where we get the 4ns unc
+                    TF1* hbtFit = new TF1("hbtFit","([0]*exp(-pow((x-[1])/[2],2)/2.0))/([2]*sqrt(2*pi))",-300,300); 
+                    hbtFit->SetParName(0,"Area");       hbtFit->SetParameter(0,0.0);
+                    hbtFit->SetParName(1,"#tau_{0}");   hbtFit->SetParameter(1, reltimePar);        hbtFit->SetParLimits(1,reltimePar-rtWindow, reltimePar+rtWindow);
+                    hbtFit->SetParName(2,"#sigma");     hbtFit->SetParameter(2, 4.5);               hbtFit->SetParLimits(2, sigmaMin, sigmaMax);
+                    cfProj->Fit("hbtFit");
+                    
+                    TF1* hbtFitAmp = new TF1("hbtFitAmp","([0]*exp(-pow((x-[1])/[2],2)/2.0))",-300,300);
+                    hbtFitAmp->SetParName(0,"Amp");         hbtFitAmp->SetParameter(0,0.0);
+                    hbtFitAmp->SetParName(1,"#tau_{0}");    hbtFitAmp->SetParameter(1, reltimePar);     hbtFitAmp->SetParLimits(1,reltimePar-rtWindow, reltimePar+rtWindow);
+                    hbtFitAmp->SetParName(2,"#sigma");      hbtFitAmp->SetParameter(2, 4.5);            hbtFitAmp->SetParLimits(2, sigmaMin, sigmaMax);
+                    //cfProj->Fit("hbtFitAmp");
+                    
+                    // weighted avg for baselines, by split
+                    double avgBaseNum(0.0), avgBaseDenom(0.0);
+                    for(int ib=startbin; ib<=endbin; ib++){
+                        TH1D* adc1 = new TH1D;      adc1 = adc12D->ProjectionX("",ib,ib); // think if rebinning is needed (I think yes) - baselines already have the right number of y bins
+                        TH1D* adc2 = new TH1D;      adc2 = adc22D->ProjectionX("",ib,ib);
+                        avgBaseNum += adc1->GetMean()*adc2->GetMean()*fullbaseline->GetPointX(ib);
+                        avgBaseDenom += adc1->GetMean()*adc2->GetMean();
+                    }
+                    double baseline = avgBaseNum/avgBaseDenom;
+                    basedist->Fill(baseline);
+                    
+                    // eval should find the u and v pts at the weighted base avg
+                    double umid = uEval->Eval(baseline);
+                    double vmid = vEval->Eval(baseline);
+                    
+                    double uvAngle = TMath::ATan(vmid/umid);   //ATan2(vmid, umid);  //ATan(vmid/umid);
+                    //uvAngle = uvAngle + (TMath::Pi()/8.0);
+                    angles << uvAngle << endl;
+                    angledist->Fill(uvAngle);
+                    
+                    cout << keyName << "  vis: " << hbtFit->GetParameter(0) << "   baseline: " << baseline << "  u: " << umid << "  v: " << vmid << endl;
+                    
+                    if(t1==1 && t2==2){ tau12->Fill(hbtFit->GetParameter(1)); }
+                    if(t1==1 && t2==3){ tau13->Fill(hbtFit->GetParameter(1)); }
+                    if(t1==1 && t2==4){ tau14->Fill(hbtFit->GetParameter(1)); }
+                    if(t1==2 && t2==3){ tau23->Fill(hbtFit->GetParameter(1)); }
+                    if(t1==2 && t2==4){ tau24->Fill(hbtFit->GetParameter(1)); }
+                    if(t1==3 && t2==4){ tau34->Fill(hbtFit->GetParameter(1)); }
+                    
+                    // quality cuts
+                    if(abs(hbtFit->GetParameter(1)-reltimePar-rtWindow) < 0.01 || abs(hbtFit->GetParameter(1)-reltimePar+rtWindow) < 0.01){ flag = 2; }
+                    if(abs(hbtFit->GetParameter(2) - sigmaMin) < 0.01 || abs(hbtFit->GetParameter(2) - sigmaMax) < 0.01){ flag = 3; }
+                    
+                    // draw each hbt peak, print to pdf
+                    cfProj->SetTitle(Form("%s T%sT%s B= %4.1f flag %d", namedate.c_str(), tee1.Data(), tee2.Data(), baseline, flag)); // why need c_str?
+                    cfProj->Rebin(4);
+                    cfProj->GetXaxis()->SetRangeUser(-64,64);
+                    cpeaks->cd(ncpeaks);  
+                    cfProj->Draw();
+                    if(flag > 1){ TLine* bad = new TLine(-64,0,64,cfProj->GetMaximum());    bad->SetLineColor(2);   bad->Draw(); }
+                    gPad->Update();
+                    //TLine* left = new TLine(reltimePar-10, 0, reltimePar-10, 1e-6);
+                    //TLine* right = new TLine(reltimePar+10, 0, reltimePar+10, 1e-6);
+                    //cpeaks->cd(ncpeaks);    left->Draw("SAME");     right->Draw("SAME");
+                    ncpeaks++;
+                    if(ncpeaks == 14){ ncpeaks = 1;  cpeaks->Print("allPeaksUgly.pdf");     cpeaks->Clear();    cpeaks->Divide(4,3); cpeaks->cd(1);}
+                    
+                    // plot points
+                    if(flag <=1){  
+                        allpts->AddPoint(baseline, hbtFit->GetParameter(0));     
+                        allpts->SetPointError(npts, 0, hbtFit->GetParError(0));
+                        npts++;
+                        //viscurve2D->AddPoint(ucoord, vcoord, hbtFit->GetParameter(0));
+                        // plot uv angle, split by baseline
+                        if(baseline < 50){ cout << endl << endl << "BASELINE LESS THAN 50!" << endl << endl << endl;}
+                        if(baseline > 50 && baseline <= 60){
+                            uv55m->AddPoint(uvAngle, hbtFit->GetParameter(0));
+                            uv55m->SetPointError(npts55m, 0, hbtFit->GetParError(0));
+                            npts55m++;
+                        }
+                        if(baseline > 60 && baseline <= 68){
+                            uv65m->AddPoint(uvAngle, hbtFit->GetParameter(0));
+                            uv65m->SetPointError(npts65m, 0, hbtFit->GetParError(0));
+                            npts65m++;
+                        }
+                        if(baseline > 68 && baseline <= 78){
+                            uv75m->AddPoint(uvAngle, hbtFit->GetParameter(0));
+                            uv75m->SetPointError(npts75m, 0, hbtFit->GetParError(0));
+                            npts75m++;
+                        }
+                        if(baseline > 78 && baseline <= 83){
+                            cout << "special pt " << uvAngle << "  " << hbtFit->GetParameter(0) << endl << endl << endl;
+                            uv80m->AddPoint(uvAngle, hbtFit->GetParameter(0));
+                            uv80m->SetPointError(npts80m, 0, hbtFit->GetParError(0));
+                            npts80m++;
+                        }
+                        if(baseline > 83 && baseline <= 88){
+                            uv85m->AddPoint(uvAngle, hbtFit->GetParameter(0));
+                            uv85m->SetPointError(npts85m, 0, hbtFit->GetParError(0));
+                            npts85m++;
+                        }
+                        if(baseline > 88 && baseline <= 95){
+                            uv90m->AddPoint(uvAngle, hbtFit->GetParameter(0));
+                            uv90m->SetPointError(npts90m, 0, hbtFit->GetParError(0));
+                            npts90m++;
+                        }
+                        if(baseline > 95 && baseline <= 103){
+                            uv100m->AddPoint(uvAngle, hbtFit->GetParameter(0));
+                            uv100m->SetPointError(npts100m, 0, hbtFit->GetParError(0));
+                            npts100m++;
+                        }
+                        if(baseline > 103){
+                            uv110m->AddPoint(uvAngle, hbtFit->GetParameter(0));
+                            uv110m->SetPointError(npts110m, 0, hbtFit->GetParError(0));
+                            npts110m++;
+                        }
+                        // plot vis curve, split by uv angle
+                        if(uvAngle > 3.0*TMath::Pi()/8.0 || uvAngle < -3.0*TMath::Pi()/8.0){
+                            viscurve1->AddPoint(baseline, hbtFit->GetParameter(0));
+                            viscurve1->SetPointError(npts1, 0, hbtFit->GetParError(0));
+                            npts1++;
+                        }
+                        if(uvAngle > -3.0*TMath::Pi()/8.0 && uvAngle < -TMath::Pi()/8.0){
+                            viscurve2->AddPoint(baseline, hbtFit->GetParameter(0));
+                            viscurve2->SetPointError(npts2, 0, hbtFit->GetParError(0));
+                            npts2++;
+                        }
+                        if(uvAngle > -TMath::Pi()/8.0 && uvAngle < TMath::Pi()/8.0){
+                            viscurve3->AddPoint(baseline, hbtFit->GetParameter(0));
+                            viscurve3->SetPointError(npts3, 0, hbtFit->GetParError(0));
+                            npts3++;
+                        }
+                        if(uvAngle > TMath::Pi()/8.0 && uvAngle < 3.0*TMath::Pi()/8.0){
+                            viscurve4->AddPoint(baseline, hbtFit->GetParameter(0));
+                            viscurve4->SetPointError(npts4, 0, hbtFit->GetParError(0));
+                            npts4++;
+                        }
+                    }
+                    
+                    startbin += cf2D->GetYaxis()->GetNbins()/split;
+                    endbin   += cf2D->GetYaxis()->GetNbins()/split;
+                    
+                } // end of split loop
+            
+            } // end of pair dir loop
+        } // end of all objs in file loop
+        
+    } // end of root files loop
+    // close pdf
+    cpeaks->Print("allPeaksUgly.pdf");
+    cpeaks->Print("allPeaksUgly.pdf]");
+    
+    // now read in pts from old data vis curve
+    double oldbase(0.0), oldbaseerr(0.0), oldvis(0.0), oldviserr(0.0), junk1(0.0), junk2(0.0);
+    string line;
+    ifstream oldptsfile;    oldptsfile.open("PointsInVisibilityCurve.txt");
+    
+    TGraphErrors* oldpts = new TGraphErrors();  oldpts->SetMarkerColor(2);  oldpts->SetMarkerStyle(20);
+    int nOld(0);
+    while(getline(oldptsfile, line)){
+        oldptsfile >> oldbase >> oldbaseerr >> oldvis >> oldviserr >> junk1 >> junk2;
+        //cout << oldbase << " " << oldbaseerr << " " << oldvis << " " << oldviserr << " " << junk1 << " " << junk2 << endl;
+        oldpts->AddPoint(oldbase, oldvis);      oldpts->SetPointError(nOld, oldbaseerr, oldviserr);
+        nOld++;
+    }
+    
+    angles.close();
+    
+    // draw tau dists
+    cdist->Divide(3,2);
+    cdist->cd(1);   tau12->Draw();
+    cdist->cd(2);   tau13->Draw();
+    cdist->cd(3);   tau14->Draw();
+    cdist->cd(4);   tau23->Draw();
+    cdist->cd(5);   tau24->Draw();
+    cdist->cd(6);   tau34->Draw();
+    cdist->Print("dists.pdf");
+    cdist->cd();
+    basedist->Draw();
+    cdist->Print("dists.pdf");
+    angledist->Draw();
+    cdist->Print("dists.pdf");
+    cdist->Print("dists.pdf]");
+    
+    // draw vis curve
+    allpts->AddPoint(0,0);
+    cvis->cd();
+    allpts->Draw("AP");
+    oldpts->Draw("PSAME");
+    TLine* zero = new TLine(0,0,180,0);
+    zero->Draw("SAME");
+    cvis->Print("viscurve.pdf");
+    
+    // add base lines
+    TLine* b60 = new TLine(60,-2e-6,60,18e-6);      b60->Draw("SAME");
+    TLine* b68 = new TLine(68,-2e-6,68,18e-6);      b68->Draw("SAME");
+    TLine* b78 = new TLine(78,-2e-6,78,18e-6);      b78->Draw("SAME");
+    TLine* b83 = new TLine(83,-2e-6,83,18e-6);      b83->Draw("SAME");
+    TLine* b88 = new TLine(88,-2e-6,88,18e-6);      b88->Draw("SAME");
+    TLine* b95 = new TLine(95,-2e-6,95,18e-6);      b95->Draw("SAME");
+    TLine* b103 = new TLine(103,-2e-6,103,18e-6);   b103->Draw("SAME");
+    cvis->Print("viscurve.pdf");
+    
+    axes->Draw("AP");
+    viscurve1->Draw("PSAME");
+    viscurve2->Draw("PSAME");
+    viscurve3->Draw("PSAME");
+    viscurve4->Draw("PSAME");
+    zero->Draw("SAME");
+    TLegend* vcleg = new TLegend(0.7,0.7,0.9,0.9);
+    vcleg->AddEntry(viscurve1, "-5#pi/8- -3#pi/8","P");
+    vcleg->AddEntry(viscurve2, "-3#pi/8 - -#pi/8", "P");
+    vcleg->AddEntry(viscurve3, "-#pi/8 - #pi/8", "P");
+    vcleg->AddEntry(viscurve4, "#pi/8 - 3#pi/8","P");
+    vcleg->Draw("SAME");
+    cvis->Print("viscurve.pdf");
+    cvis->Print("viscurve.pdf]");
+    
+    // draw uv vs vis plots grouped by baseline
+    uvaxes->AddPoint(-TMath::Pi()/2, 0);  uvaxes->AddPoint(TMath::Pi()/2, 0);   uvaxes->AddPoint(0, 15e-6);     
+    cuvClumps->cd(1);   uvaxes->SetTitle("baseline 50-60m;uv angle from E;visibility");     uvaxes->Draw("AP");     uv55m->Draw("PSAME"); // set range user seems to only work if the range is SMALLER than the existing points
+    cuvClumps->cd(2);   uvaxes->SetTitle("baseline 60-68m;uv angle from E;visibility");     uvaxes->Draw("AP");     uv65m->Draw("PSAME");
+    cuvClumps->cd(3);   uvaxes->SetTitle("baseline 68-78m;uv angle from E;visibility");     uvaxes->Draw("AP");     uv75m->Draw("PSAME");
+    cuvClumps->cd(4);   uvaxes->SetTitle("baseline 78-83m;uv angle from E;visibility");     uvaxes->Draw("AP");     uv80m->Draw("PSAME");
+    cuvClumps->cd(5);   uvaxes->SetTitle("baseline 83-88m;uv angle from E;visibility");     uvaxes->Draw("AP");     uv85m->Draw("PSAME");
+    cuvClumps->cd(6);   uvaxes->SetTitle("baseline 88-95m;uv angle from E;visibility");     uvaxes->Draw("AP");     uv90m->Draw("PSAME");
+    cuvClumps->cd(7);   uvaxes->SetTitle("baseline 95-103m;uv angle from E;visibility");    uvaxes->Draw("AP");     uv100m->Draw("PSAME");
+    cuvClumps->cd(8);   uvaxes->SetTitle("baseline 103m+;uv angle from E;visibility");      uvaxes->Draw("AP");     uv110m->Draw("PSAME");
+    cuvClumps->Print("uvClumps.pdf");
+    
+    TLegend* uvleg = new TLegend(0.6,0.3,0.9, 0.1);
+    uvleg->AddEntry(uv55m, "50-60m","P");
+    uvleg->AddEntry(uv65m, "60-68m","P");
+    uvleg->AddEntry(uv75m, "68-78m","P");
+    uvleg->AddEntry(uv80m, "78-83m","P");
+    uvleg->AddEntry(uv85m, "83-88m","P");
+    uvleg->AddEntry(uv90m, "88-95m","P");
+    uvleg->AddEntry(uv100m, "95-103m","P");
+    uvleg->AddEntry(uv110m, "103m+","P");
+    
+    cuvClumps->cd();    uvaxes->AddPoint(-TMath::Pi()/2.0, 15e-6);  uvaxes->AddPoint(TMath::Pi()/2.0, -2e-6);   uvaxes->Draw("AP");
+    uv55m->SetMarkerColor(2);   uv55m->Draw("PSAME");   
+    uv65m->SetMarkerColor(94);  uv65m->Draw("PSAME");
+    uv75m->SetMarkerColor(5);   uv75m->Draw("PSAME");
+    uv80m->SetMarkerColor(77);  uv80m->Draw("PSAME");
+    uv85m->SetMarkerColor(7);   uv85m->Draw("PSAME");
+    uv90m->SetMarkerColor(63);  uv90m->Draw("PSAME");
+    uv100m->SetMarkerColor(51); uv100m->Draw("PSAME");
+    uv110m->SetMarkerColor(6);  uv110m->Draw("PSAME");
+    uvleg->Draw("SAME");
+    cuvClumps->Print("uvClumps.pdf");
+    cuvClumps->Print("uvClumps.pdf]");
+    
+   // cvis2D->cd();
+//    viscurve2D->AddPoint(0,0,0);
+ //   viscurve2D->Draw("AP");
+    
+} // end of macro
